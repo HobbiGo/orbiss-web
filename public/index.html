@@ -183,4 +183,23 @@ form.onsubmit=async event=>{event.preventDefault();const text=input.value.trim()
 async function loadOnlineFeed(){reloadFeed.disabled=true;try{const data=await communityAPI('/api/posts');if(!Array.isArray(data.items))throw new Error('Format feed tidak sesuai.');remotePosts=data.items;drawOnlineFeed()}catch(error){onlineFeed.replaceChildren(element('p',error.message))}finally{reloadFeed.disabled=false}}
 publishOnline.onclick=async()=>{const text=composerInput.value.trim();if(!text){onlineStatus.textContent='Tulis postingan terlebih dahulu.';return}publishOnline.disabled=true;onlineStatus.textContent='Mengirim ke database…';try{await communityAPI('/api/posts','POST',{text});composerInput.value='';charCount.textContent='0 / 1.000 karakter';onlineStatus.textContent='Postingan berhasil disimpan di D1.';await updateCommunitySession();await loadOnlineFeed()}catch(error){onlineStatus.textContent=error.message}finally{publishOnline.disabled=false}};
 reloadFeed.onclick=async()=>{await updateCommunitySession();await loadOnlineFeed()};onlineSearch.oninput=drawOnlineFeed;window.addEventListener('hashchange',()=>{if(location.hash==='#community'){updateCommunitySession();loadOnlineFeed()}});updateCommunitySession();loadOnlineFeed();
-</script></body></html>
+</script>
+<style>
+/* Community composer polish: preserve button width in narrow columns. */
+#community .comment-form{display:flex;align-items:center;gap:10px;width:100%;margin:16px 0 8px}
+#community .comment-form input{flex:1 1 0;min-width:0;width:auto;margin:0;height:44px;padding:11px 13px;border-radius:11px}
+#community .comment-form button{flex:0 0 auto;min-width:78px;min-height:44px;white-space:nowrap;word-break:normal;padding:11px 16px;margin:0;border-radius:11px;line-height:1.2;background:#15466a;border:1px solid #2e789c}
+#community .comment-form button:disabled{opacity:.55;cursor:wait}
+#community .actions{flex-wrap:wrap;gap:8px}
+#community .actions button{white-space:nowrap;min-height:40px;line-height:1.2}
+#community .reply-list{margin-top:14px;padding-left:14px}
+#community .reply-list>div{padding:12px 0;border-bottom:1px solid #1e354b}
+#community .reply-list>div:last-child{border-bottom:0}
+#community .reply-list p{margin:9px 0;line-height:1.6}
+#community .card{min-width:0}
+#community #onlinePost{width:100%;min-height:140px;padding:14px;margin:10px 0 4px;line-height:1.6;border-radius:12px;resize:vertical}
+#community .card>label{display:block;margin-top:16px;font-weight:700}
+#community .card>button{white-space:nowrap;min-height:44px;margin-top:8px}
+#community .note{line-height:1.6;overflow-wrap:anywhere}
+@media(max-width:480px){#community .comment-form{gap:8px}#community .comment-form button{min-width:68px;padding:11px 12px}#community .comment-form input{font-size:14px}#community .card{padding:16px}}
+</style></body></html>
