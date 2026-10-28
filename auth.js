@@ -160,3 +160,20 @@ export async function handleRestore(request,env){
   return result({error:listing?'Daftar konten tersembunyi belum dapat dimuat. Periksa log Worker; belum ada konten diubah.':'Pemulihan gagal. Periksa tabel restoration_audit dan log Worker.',code:listing?'HIDDEN_LIST_FAILED':'RESTORE_FAILED'},503)
  }
 }
+
+export async function handleClub(request,env){
+ try{
+  if(!env.DB)return result({error:'Database belum terhubung.'},503);
+  const session=await getSession(request,env);if(!session)return result({error:'Masuk ke akun untuk menyimpan klub favorit.'},401);
+  if(request.method==='GET')return result({clubName:session.row.club_name||null,storage:'account_database'});
+  if(request.method!=='PUT')return result({error:'Metode tidak diizinkan.'},405);
+  if(request.headers.get('Origin')!==new URL(request.url).origin)return result({error:'Origin tidak diizinkan.'},403);
+  if(!equal(await hash(request.headers.get('X-CSRF-Token')||''),session.row.csrf_token_hash))return result({error:'Sesi keamanan berubah. Muat ulang halaman.'},403);
+  if(!env.AUTH_RATE_LIMITER)return result({error:'Pembatasan permintaan belum tersedia.'},503);
+  const allowed=await env.AUTH_RATE_LIMITER.limit({key:'orbiss-club:'+session.row.id});if(!allowed.success)return result({error:'Terlalu banyak perubahan. Tunggu sekitar satu menit.'},429);
+  const body=await readBody(request);if(typeof body.clubName!=='string')return result({error:'Nama klub tidak valid.'},400);
+  const club=body.clubName.trim();if(club.length<2||club.length>80||/[\u0000-\u001f\u007f]/.test(club))return result({error:'Nama klub harus 2–80 karakter tanpa karakter kontrol.'},400);
+  const response=await env.DB.prepare('UPDATE users SET club_name=? WHERE id=?').bind(club,session.row.id).run();if(response.meta.changes!==1)return result({error:'Akun tidak ditemukan.'},404);
+  return result({ok:true,clubName:club,storage:'account_database'});
+ }catch{return result({error:'Pilihan klub belum dapat disimpan atau dibaca. Coba lagi setelah memeriksa koneksi.'},503)}
+}
