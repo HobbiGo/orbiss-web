@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ORBISS • Community + Live Prototype</title><style>
+<html lang="id"><head><script>function orbissOriginal(tag,text,cls){const node=element(tag,text,cls);node.setAttribute('data-no-i18n','');return node}</script><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ORBISS • Community + Live Prototype</title><style>
 *{box-sizing:border-box}body{margin:0;background:#080d1a;color:#f4f8fb;font:15px Arial, sans-serif}button,input,textarea{font:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid #65deea;outline-offset:3px}button{border:1px solid #31506d;background:#102337;color:inherit;padding:11px 14px;border-radius:12px}button.active,.primary{background:#65deea;color:#080d1a}.app{max-width:1120px;margin:auto;padding:0 18px 110px}header{position:sticky;top:0;background:#080d1af5;z-index:5;padding:18px 0;border-bottom:1px solid #24364a;display:flex;justify-content:space-between;align-items:center}.logo{font-size:27px;font-weight:900;letter-spacing:2px}.logo span{color:#65deea}.tag{font-size:9px;letter-spacing:3px;color:#acbfd2;margin-top:4px}nav{display:flex;gap:8px;overflow:auto;padding:16px 0}nav button{white-space:nowrap;font-size:12px}.page[hidden]{display:none}.hero{padding:28px;border:1px solid #28506a;border-radius:20px;background:radial-gradient(ellipse at top right,#164a63,transparent 70%),#102337;margin:10px 0 20px}h1{font-size:clamp(28px,5vw,46px);margin:10px 0}h2{font-size:21px}p{line-height:1.6;color:#afc1d2}.eyebrow,.badge{color:#65deea;font-size:12px;font-weight:bold}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.card{background:#102337;border:1px solid #243e56;border-radius:16px;padding:18px;margin-bottom:14px}.card h3{margin:10px 0}.player{aspect-ratio:16/9;background:#030812;border:1px solid #28435b;border-radius:16px;display:grid;place-content:center;text-align:center;padding:18px}.player p{margin:5px 0}input,textarea{width:100%;background:#080d1a;color:#f4f8fb;border:1px solid #31506d;border-radius:10px;padding:12px;margin:10px 0}textarea{min-height:90px;resize:vertical}.actions{display:flex;gap:10px;flex-wrap:wrap}.note{font-size:12px;color:#9eb6cc}.bottom{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(1120px,100%);display:grid;grid-template-columns:repeat(5,1fr);gap:4px;background:#080d1af5;padding:10px 8px calc(10px + env(safe-area-inset-bottom));border-top:1px solid #28435b;z-index:8}.bottom button{font-size:11px;padding:12px 3px}footer{margin-top:24px;color:#8da7bf;font-size:11px}#status{min-height:24px;color:#65deea}.post{border-bottom:1px solid #2a4157;padding:14px 0;overflow-wrap:anywhere}.post:last-child{border:0}dialog{background:#102337;color:#f4f8fb;border:1px solid #31506d;border-radius:16px;max-width:440px;width:90%}dialog::backdrop{background:#000b}@media(max-width:600px){.grid{grid-template-columns:1fr}.app{padding-left:12px;padding-right:12px}.hero{padding:20px}nav{margin-right:-12px}header .note{max-width:100px;text-align:right}}
 
 </style>
@@ -51,7 +51,7 @@ function postKey(post,index){return post.id||post.date+'|'+post.text}
 function getEngagement(key){const value=engagement[key];if(!value||typeof value!=='object')return {liked:false,replies:[]};return {liked:value.liked===true,replies:Array.isArray(value.replies)?value.replies.filter(r=>typeof r==='string'):[]}}
 function persistEngagement(){return saveLocal('orbissPrototypeEngagementV1',engagement)}
 renderFeed=function(){const feed=document.getElementById('feed');feed.replaceChildren();const filtered=posts.filter(post=>post.text.toLowerCase().includes(searchTerm));count.textContent=filtered.length+' postingan lokal';if(!filtered.length){feed.append(element('p',searchTerm?'Tidak ada postingan yang cocok.':'Belum ada postingan. Pilih topik atau tulis pendapat pertamamu.'));return}
-for(const post of filtered){const key=postKey(post);const data=getEngagement(key);const article=element('article',undefined,'post');article.append(element('strong','Kamu • lokal'),element('p',post.text),element('small',post.date,'note'));const actions=element('div',undefined,'actions');actions.style.marginTop='14px';const like=element('button',data.liked?'Disukai olehmu':'Suka','like');like.type='button';like.setAttribute('aria-pressed',String(data.liked));like.onclick=()=>{const current=getEngagement(key);current.liked=!current.liked;engagement[key]=current;persistEngagement();like.textContent=current.liked?'Disukai olehmu':'Suka';like.setAttribute('aria-pressed',String(current.liked))};const replyButton=element('button','Komentar lokal ('+data.replies.length+')');replyButton.type='button';const replyArea=element('div');replyArea.hidden=true;const replies=element('div',undefined,'reply-list');const drawReplies=()=>{replies.replaceChildren();for(const reply of getEngagement(key).replies){replies.append(element('strong','Kamu • komentar lokal'),element('p',reply))}};drawReplies();const form=element('form',undefined,'comment-form');const input=document.createElement('input');input.placeholder='Tulis komentar lokal';input.setAttribute('aria-label','Komentar untuk postingan '+post.text.slice(0,50));input.maxLength=500;input.required=true;const submit=element('button','Kirim');submit.type='submit';form.append(input,submit);form.onsubmit=event=>{event.preventDefault();const value=input.value.trim();if(!value)return;const current=getEngagement(key);if(current.replies.length>=50){notify('Batas 50 komentar lokal per postingan tercapai.');return}current.replies.push(value);engagement[key]=current;const saved=persistEngagement();drawReplies();replyButton.textContent='Komentar lokal ('+current.replies.length+')';input.value='';if(saved)notify('Komentar disimpan lokal, tidak dikirim online.')};replyButton.onclick=()=>{replyArea.hidden=!replyArea.hidden;replyButton.setAttribute('aria-expanded',String(!replyArea.hidden));if(!replyArea.hidden)input.focus()};replyButton.setAttribute('aria-expanded','false');replyArea.append(replies,form);actions.append(like,replyButton);article.append(actions,replyArea);feed.append(article)}};
+for(const post of filtered){const key=postKey(post);const data=getEngagement(key);const article=element('article',undefined,'post');article.append(element('strong','Kamu • lokal'),orbissOriginal('p',post.text),element('small',post.date,'note'));const actions=element('div',undefined,'actions');actions.style.marginTop='14px';const like=element('button',data.liked?'Disukai olehmu':'Suka','like');like.type='button';like.setAttribute('aria-pressed',String(data.liked));like.onclick=()=>{const current=getEngagement(key);current.liked=!current.liked;engagement[key]=current;persistEngagement();like.textContent=current.liked?'Disukai olehmu':'Suka';like.setAttribute('aria-pressed',String(current.liked))};const replyButton=element('button','Komentar lokal ('+data.replies.length+')');replyButton.type='button';const replyArea=element('div');replyArea.hidden=true;const replies=element('div',undefined,'reply-list');const drawReplies=()=>{replies.replaceChildren();for(const reply of getEngagement(key).replies){replies.append(element('strong','Kamu • komentar lokal'),orbissOriginal('p',reply))}};drawReplies();const form=element('form',undefined,'comment-form');const input=document.createElement('input');input.placeholder='Tulis komentar lokal';input.setAttribute('aria-label','Komentar untuk postingan '+post.text.slice(0,50));input.maxLength=500;input.required=true;const submit=element('button','Kirim');submit.type='submit';form.append(input,submit);form.onsubmit=event=>{event.preventDefault();const value=input.value.trim();if(!value)return;const current=getEngagement(key);if(current.replies.length>=50){notify('Batas 50 komentar lokal per postingan tercapai.');return}current.replies.push(value);engagement[key]=current;const saved=persistEngagement();drawReplies();replyButton.textContent='Komentar lokal ('+current.replies.length+')';input.value='';if(saved)notify('Komentar disimpan lokal, tidak dikirim online.')};replyButton.onclick=()=>{replyArea.hidden=!replyArea.hidden;replyButton.setAttribute('aria-expanded',String(!replyArea.hidden));if(!replyArea.hidden)input.focus()};replyButton.setAttribute('aria-expanded','false');replyArea.append(replies,form);actions.append(like,replyButton);article.append(actions,replyArea);feed.append(article)}};
 const postInput=document.getElementById('postText');const characterCount=element('p','0 / 1.000 karakter','note');postInput.after(characterCount);postInput.addEventListener('input',()=>characterCount.textContent=postInput.value.length+' / 1.000 karakter');
 document.getElementById('publish').onclick=()=>{const text=postInput.value.trim();if(!text){notify('Tulis pendapatmu terlebih dahulu.');postInput.focus();return}posts.unshift({id:crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random(),text:text.slice(0,1000),date:new Date().toLocaleString('id-ID')});posts=posts.slice(0,50);const saved=saveLocal('orbissPrototypePostsV1',posts);searchTerm='';search.value='';renderFeed();postInput.value='';characterCount.textContent='0 / 1.000 karakter';if(saved)notify('Postingan ditambahkan ke feed lokal. Tidak dipublikasikan online.')};
 const backup=element('button','Unduh cadangan Community lokal');backup.type='button';backup.onclick=()=>{const payload={version:1,exportedAt:new Date().toISOString(),posts,engagement};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download='orbiss-community-local-'+Date.now()+'.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};document.querySelector('#community .card:nth-of-type(2)').append(backup);renderFeed();
@@ -122,7 +122,7 @@ profileButton.onclick=async()=>{
  let token='';let busy=false;let verified=false;let finalMessage='';
  try{
   const api=await loadOrbissTurnstile();if(!holder.isConnected||!utility.open)return;
-  orbissWidgetId=api.render(holder,{sitekey:'0x4AAAAAAFpVcCWlM8_CIzqI',action:'orbiss_signup',theme:'dark',
+  orbissWidgetId=api.render(holder,{sitekey:'0x4AAAAAAFpVcCWlM8_CIzqI',action:'orbiss_signup',language:window.orbissLocale||'id',theme:'dark',
    callback:value=>{token=value;submit.disabled=busy||verified;if(!finalMessage)result.textContent='Pemeriksaan browser selesai. Tekan tombol untuk memvalidasi ke server.'},
    'expired-callback':()=>{token='';submit.disabled=true;if(!finalMessage)result.textContent='Verifikasi kedaluwarsa. Tunggu tantangan baru.'},
    'error-callback':()=>{token='';submit.disabled=true;if(!finalMessage)result.textContent='Pemeriksaan gagal. Periksa hostname widget dan koneksi internet.'}
@@ -158,7 +158,7 @@ profileButton.onclick=async()=>{
  const holder=element('div');const submit=element('button','Daftar akun uji','primary');submit.type='submit';submit.disabled=true;const feedback=element('p','','profile-note');feedback.setAttribute('role','status');
  form.append(nameLabel,name,emailLabel,email,passwordLabel,password,holder,submit,feedback);utilityContent.append(tabs,form);
  const switchMode=value=>{if(busy)return;mode=value;name.hidden=nameLabel.hidden=value==='login';name.required=value==='register';password.autocomplete=value==='login'?'current-password':'new-password';submit.textContent=value==='login'?'Masuk':'Daftar akun uji';register.classList.toggle('active',value==='register');login.classList.toggle('active',value==='login');feedback.textContent='';token='';submit.disabled=true;if(window.turnstile&&activeWidget!==undefined)window.turnstile.reset(activeWidget)};register.onclick=()=>switchMode('register');login.onclick=()=>switchMode('login');
- try{const api=await loadOrbissTurnstile();if(!holder.isConnected||!utility.open)return;activeWidget=orbissWidgetId=api.render(holder,{sitekey:'0x4AAAAAAFpVcCWlM8_CIzqI',action:'orbiss_signup',theme:'dark',callback:value=>{token=value;submit.disabled=busy},'expired-callback':()=>{token='';submit.disabled=true},'error-callback':()=>{token='';submit.disabled=true;feedback.textContent='Turnstile gagal. Tutup panel dan coba lagi.'}})}catch(error){feedback.textContent=error.message;return}
+ try{const api=await loadOrbissTurnstile();if(!holder.isConnected||!utility.open)return;activeWidget=orbissWidgetId=api.render(holder,{sitekey:'0x4AAAAAAFpVcCWlM8_CIzqI',action:'orbiss_signup',language:window.orbissLocale||'id',theme:'dark',callback:value=>{token=value;submit.disabled=busy},'expired-callback':()=>{token='';submit.disabled=true},'error-callback':()=>{token='';submit.disabled=true;feedback.textContent='Turnstile gagal. Tutup panel dan coba lagi.'}})}catch(error){feedback.textContent=error.message;return}
  form.onsubmit=async event=>{event.preventDefault();if(!token||busy||!form.reportValidity())return;busy=true;submit.disabled=true;register.disabled=login.disabled=true;feedback.textContent='Memproses akun di server…';try{const data=await accountRequest(mode,{displayName:name.value.trim(),email:email.value.trim(),password:password.value,token});password.value='';orbissAuthUser=data.user;orbissCSRF=data.csrfToken;profileButton.textContent='Akun';if(activeWidget!==undefined){window.turnstile.remove(activeWidget);orbissWidgetId=undefined}form.replaceChildren(element('h3','Halo, '+data.user.displayName),element('p',mode==='register'?'Akun uji berhasil dibuat dan sesi masuk aktif. Email belum diverifikasi.':'Berhasil masuk ke akun uji.','account-banner'));tabs.remove();const close=element('button','Selesai');close.type='button';close.onclick=()=>utility.close();form.append(close)}catch(error){password.value='';feedback.textContent=error.message;busy=false;register.disabled=login.disabled=false;token='';if(window.turnstile&&activeWidget!==undefined)window.turnstile.reset(activeWidget)}};
 };
 refreshAccount().catch(()=>{});
@@ -172,7 +172,7 @@ const feedCard=element('article',undefined,'card');feedCard.append(element('h2',
 async function communityAPI(path,method='GET',body){const headers={Accept:'application/json'};if(method!=='GET'){await refreshAccount();if(!orbissAuthUser||!orbissCSRF)throw new Error('Masuk ke akun melalui tombol Buat akun terlebih dahulu.');headers['Content-Type']='application/json';headers['X-CSRF-Token']=orbissCSRF}const response=await fetch(path,{method,headers,credentials:'same-origin',cache:'no-store',...(body!==undefined?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(20000)});const data=await response.json();if(!response.ok)throw new Error(data.error||'Permintaan gagal.');return data}
 function showDate(seconds){return new Date(Number(seconds)*1000).toLocaleString('id-ID')}
 async function updateCommunitySession(){try{await refreshAccount();loginState.textContent=orbissAuthUser?'Masuk sebagai '+orbissAuthUser.displayName:'Baca feed tanpa masuk. Untuk mengirim, buka Buat akun lalu Masuk.'}catch{loginState.textContent='Sesi belum dapat diperiksa. Periksa koneksi.'}}
-function drawOnlineFeed(){onlineFeed.replaceChildren();const query=onlineSearch.value.trim().toLowerCase();const items=remotePosts.filter(post=>(post.text+' '+post.author).toLowerCase().includes(query));if(!items.length){onlineFeed.append(element('p',query?'Tidak ada kecocokan pada postingan yang dimuat.':'Belum ada postingan online. Jadilah yang pertama.'));return}for(const post of items){const article=element('article',undefined,'post');article.append(element('strong',post.author),element('p',post.text),element('small',showDate(post.createdAt),'note'));const actions=element('div',undefined,'actions');actions.style.marginTop='12px';const like=element('button',(post.likedByMe?'Disukai':'Suka')+' · '+post.likeCount);like.type='button';like.setAttribute('aria-pressed',String(!!post.likedByMe));const comment=element('button','Komentar · '+post.commentCount);comment.type='button';const commentArea=element('div');commentArea.hidden=true;const commentStatus=element('p','','note');commentStatus.setAttribute('role','status');const commentsList=element('div',undefined,'reply-list');const form=element('form',undefined,'comment-form');const input=document.createElement('input');input.maxLength=500;input.required=true;input.placeholder='Komentar maksimal 500 karakter';input.setAttribute('aria-label','Komentar untuk postingan '+post.author);const send=element('button','Kirim');send.type='submit';form.append(input,send);commentArea.append(commentStatus,commentsList,form);async function loadComments(){commentStatus.textContent='Memuat komentar…';try{const data=await communityAPI('/api/posts/'+encodeURIComponent(post.id)+'/comments');commentsList.replaceChildren();for(const item of data.items){const block=element('div');block.append(element('strong',item.author),element('p',item.text),element('small',showDate(item.createdAt),'note'));block.append(reportControl("comment",item.id));commentsList.append(block)}commentStatus.textContent=data.items.length?'Komentar dari database.':'Belum ada komentar.'}catch(error){commentStatus.textContent=error.message}}
+function drawOnlineFeed(){onlineFeed.replaceChildren();const query=onlineSearch.value.trim().toLowerCase();const items=remotePosts.filter(post=>(post.text+' '+post.author).toLowerCase().includes(query));if(!items.length){onlineFeed.append(element('p',query?'Tidak ada kecocokan pada postingan yang dimuat.':'Belum ada postingan online. Jadilah yang pertama.'));return}for(const post of items){const article=element('article',undefined,'post');article.append(orbissOriginal('strong',post.author),orbissOriginal('p',post.text),element('small',showDate(post.createdAt),'note'));const actions=element('div',undefined,'actions');actions.style.marginTop='12px';const like=element('button',(post.likedByMe?'Disukai':'Suka')+' · '+post.likeCount);like.type='button';like.setAttribute('aria-pressed',String(!!post.likedByMe));const comment=element('button','Komentar · '+post.commentCount);comment.type='button';const commentArea=element('div');commentArea.hidden=true;const commentStatus=element('p','','note');commentStatus.setAttribute('role','status');const commentsList=element('div',undefined,'reply-list');const form=element('form',undefined,'comment-form');const input=document.createElement('input');input.maxLength=500;input.required=true;input.placeholder='Komentar maksimal 500 karakter';input.setAttribute('aria-label','Komentar untuk postingan '+post.author);const send=element('button','Kirim');send.type='submit';form.append(input,send);commentArea.append(commentStatus,commentsList,form);async function loadComments(){commentStatus.textContent='Memuat komentar…';try{const data=await communityAPI('/api/posts/'+encodeURIComponent(post.id)+'/comments');commentsList.replaceChildren();for(const item of data.items){const block=element('div');block.append(orbissOriginal('strong',item.author),orbissOriginal('p',item.text),element('small',showDate(item.createdAt),'note'));block.append(reportControl("comment",item.id));commentsList.append(block)}commentStatus.textContent=data.items.length?'Komentar dari database.':'Belum ada komentar.'}catch(error){commentStatus.textContent=error.message}}
 comment.onclick=()=>{commentArea.hidden=!commentArea.hidden;if(!commentArea.hidden)loadComments()};like.onclick=async()=>{like.disabled=true;try{await communityAPI('/api/posts/'+encodeURIComponent(post.id)+'/like','PUT',{liked:!post.likedByMe});await loadOnlineFeed()}catch(error){onlineStatus.textContent=error.message;like.disabled=false}};
 form.onsubmit=async event=>{event.preventDefault();const text=input.value.trim();if(!text)return;send.disabled=true;commentStatus.textContent='Mengirim…';try{await communityAPI('/api/posts/'+encodeURIComponent(post.id)+'/comments','POST',{text});input.value='';post.commentCount++;comment.textContent='Komentar · '+post.commentCount;await loadComments()}catch(error){commentStatus.textContent=error.message}finally{send.disabled=false}};actions.append(like,comment,reportControl("post",post.id));article.append(actions,commentArea);onlineFeed.append(article)}}
 async function loadOnlineFeed(){reloadFeed.disabled=true;try{const data=await communityAPI('/api/posts');if(!Array.isArray(data.items))throw new Error('Format feed tidak sesuai.');remotePosts=data.items;drawOnlineFeed()}catch(error){onlineFeed.replaceChildren(element('p',error.message))}finally{reloadFeed.disabled=false}}
@@ -202,13 +202,13 @@ reloadFeed.onclick=async()=>{await updateCommunitySession();await loadOnlineFeed
 function reportControl(targetType,targetId){const button=element('button','Laporkan');button.type='button';button.onclick=()=>{openUtility('Laporkan konten');utilityContent.append(element('p','Laporan dikirim untuk ditinjau moderator. Konten tidak otomatis dihapus. Jangan sertakan data pribadi.','profile-note'));const form=element('form',undefined,'account-form');const label=element('label','Alasan');label.htmlFor='reportReason';const reason=document.createElement('select');reason.id='reportReason';for(const [value,text] of [['spam','Spam'],['abuse','Pelecehan atau konten mengganggu'],['other','Lainnya']]){const option=element('option',text);option.value=value;reason.append(option)}const details=document.createElement('textarea');details.maxLength=500;details.placeholder='Penjelasan opsional, maksimal 500 karakter';details.setAttribute('aria-label','Penjelasan laporan');const submit=element('button','Kirim laporan','primary');submit.type='submit';const status=element('p','','note');status.setAttribute('role','status');form.append(label,reason,details,submit,status);form.onsubmit=async event=>{event.preventDefault();submit.disabled=true;status.textContent='Mengirim laporan…';try{const data=await communityAPI('/api/reports','POST',{targetType,targetId,reason:reason.value,details:details.value});status.textContent=data.message;submit.textContent='Laporan tercatat'}catch(error){status.textContent=error.message;submit.disabled=false}};utilityContent.append(form)};return button}
 const moderatorButton=element('button','Moderasi');moderatorButton.type='button';moderatorButton.hidden=true;feedCard.prepend(moderatorButton);
 async function refreshModerator(){try{const data=await communityAPI('/api/moderation/session');moderatorButton.hidden=!data.isModerator}catch{moderatorButton.hidden=true}}
-moderatorButton.onclick=async()=>{openUtility('Antrean moderasi');const status=element('p','Memuat…','note');status.setAttribute('role','status');utilityContent.append(status);try{const data=await communityAPI('/api/moderation/reports');status.textContent=data.items.length?'Maksimal 50 laporan menunggu tinjauan. Identitas pelapor tidak ditampilkan.':'Tidak ada laporan menunggu tinjauan.';for(const report of data.items){const card=element('article',undefined,'card');card.append(element('strong',report.target_type==='post'?'Laporan postingan':'Laporan komentar'),element('p',report.content||'Konten tidak tersedia'),element('p','Alasan: '+report.reason),element('p',report.details));const actions=element('div',undefined,'actions');const note=element('p','','note');for(const [action,label] of [['hide','Sembunyikan konten'],['dismiss','Tutup laporan']]){const b=element('button',label);b.type='button';b.onclick=async()=>{actions.querySelectorAll('button').forEach(btn=>btn.disabled=true);try{await communityAPI('/api/moderation/reports/'+encodeURIComponent(report.id)+'/review','POST',{action});note.textContent=action==='hide'?'Konten disembunyikan, bukan dihapus. Tindakan dicatat.':'Laporan ditutup. Konten tetap terlihat. Tindakan dicatat.';loadOnlineFeed()}catch(error){note.textContent=error.message;actions.querySelectorAll('button').forEach(btn=>btn.disabled=false)}};actions.append(b)}card.append(actions,note);utilityContent.append(card)}}catch(error){status.textContent=error.message}};
+moderatorButton.onclick=async()=>{openUtility('Antrean moderasi');const status=element('p','Memuat…','note');status.setAttribute('role','status');utilityContent.append(status);try{const data=await communityAPI('/api/moderation/reports');status.textContent=data.items.length?'Maksimal 50 laporan menunggu tinjauan. Identitas pelapor tidak ditampilkan.':'Tidak ada laporan menunggu tinjauan.';for(const report of data.items){const card=element('article',undefined,'card');card.append(element('strong',report.target_type==='post'?'Laporan postingan':'Laporan komentar'), (report.content?orbissOriginal('p',report.content):element('p','Konten tidak tersedia')),element('p','Alasan: '+report.reason),orbissOriginal('p',report.details));const actions=element('div',undefined,'actions');const note=element('p','','note');for(const [action,label] of [['hide','Sembunyikan konten'],['dismiss','Tutup laporan']]){const b=element('button',label);b.type='button';b.onclick=async()=>{actions.querySelectorAll('button').forEach(btn=>btn.disabled=true);try{await communityAPI('/api/moderation/reports/'+encodeURIComponent(report.id)+'/review','POST',{action});note.textContent=action==='hide'?'Konten disembunyikan, bukan dihapus. Tindakan dicatat.':'Laporan ditutup. Konten tetap terlihat. Tindakan dicatat.';loadOnlineFeed()}catch(error){note.textContent=error.message;actions.querySelectorAll('button').forEach(btn=>btn.disabled=false)}};actions.append(b)}card.append(actions,note);utilityContent.append(card)}}catch(error){status.textContent=error.message}};
 window.addEventListener('hashchange',()=>{if(location.hash==='#community')refreshModerator()});refreshModerator();
 </script><style>#utilityContent select{width:100%;padding:12px;border:1px solid #31506d;border-radius:10px;background:#080d1a;color:#f4f8fb;margin:8px 0}#community .actions button{font-size:12px}#utilityContent .actions button{white-space:normal}#community button[hidden]{display:none}</style>
 <script>
 const hiddenContentButton=element('button','Konten tersembunyi');hiddenContentButton.type='button';hiddenContentButton.hidden=true;moderatorButton.after(hiddenContentButton);
 async function refreshRestoreAccess(){try{const data=await communityAPI('/api/moderation/session');hiddenContentButton.hidden=!data.isModerator}catch{hiddenContentButton.hidden=true}}
-hiddenContentButton.onclick=async()=>{openUtility('Konten tersembunyi');const status=element('p','Memuat…','note');status.setAttribute('role','status');utilityContent.append(status);try{const data=await communityAPI('/api/moderation/hidden');status.textContent=data.items.length?'Maksimal 50 konten tersembunyi terbaru. Pemulihan dicatat tanpa menghapus riwayat laporan.':'Tidak ada konten tersembunyi pada daftar ini.';for(const item of data.items){const card=element('article',undefined,'card');card.append(element('strong',item.targetType==='post'?'Postingan tersembunyi':'Komentar tersembunyi'),element('p',item.content),element('p','Penulis: '+item.author));if(item.parentHidden)card.append(element('p','Postingan induk masih tersembunyi. Memulihkan komentar saja tidak akan membuatnya tampil publik.','note'));const restore=element('button','Pulihkan');restore.type='button';const note=element('p','','note');note.setAttribute('role','status');restore.onclick=async()=>{restore.disabled=true;note.textContent='Memulihkan…';try{const response=await communityAPI('/api/moderation/restore','POST',{targetType:item.targetType,targetId:item.id});restore.textContent='Dipulihkan';note.textContent=response.message;await loadOnlineFeed()}catch(error){note.textContent=error.message;restore.disabled=false}};card.append(restore,note);utilityContent.append(card)}}catch(error){status.textContent=error.message}};
+hiddenContentButton.onclick=async()=>{openUtility('Konten tersembunyi');const status=element('p','Memuat…','note');status.setAttribute('role','status');utilityContent.append(status);try{const data=await communityAPI('/api/moderation/hidden');status.textContent=data.items.length?'Maksimal 50 konten tersembunyi terbaru. Pemulihan dicatat tanpa menghapus riwayat laporan.':'Tidak ada konten tersembunyi pada daftar ini.';for(const item of data.items){const card=element('article',undefined,'card');card.append(element('strong',item.targetType==='post'?'Postingan tersembunyi':'Komentar tersembunyi'),orbissOriginal('p',item.content),element('p','Penulis: '+item.author));if(item.parentHidden)card.append(element('p','Postingan induk masih tersembunyi. Memulihkan komentar saja tidak akan membuatnya tampil publik.','note'));const restore=element('button','Pulihkan');restore.type='button';const note=element('p','','note');note.setAttribute('role','status');restore.onclick=async()=>{restore.disabled=true;note.textContent='Memulihkan…';try{const response=await communityAPI('/api/moderation/restore','POST',{targetType:item.targetType,targetId:item.id});restore.textContent='Dipulihkan';note.textContent=response.message;await loadOnlineFeed()}catch(error){note.textContent=error.message;restore.disabled=false}};card.append(restore,note);utilityContent.append(card)}}catch(error){status.textContent=error.message}};
 window.addEventListener('hashchange',()=>{if(location.hash==='#community')refreshRestoreAccess()});refreshRestoreAccess();
 </script><style>#community #restoreTools{display:flex;gap:8px}#community button[hidden]{display:none}</style>
 <script>
@@ -219,8 +219,8 @@ const accountClubNote=accountClubCard.querySelector('.note');accountClubNote.tex
 const accountClubStatus=element('p','','note');accountClubStatus.setAttribute('role','status');accountClubSave.after(accountClubStatus);
 accountClubTitle.textContent='Memuat pilihan akun…';accountClubInput.value='';
 const accountClubRefresh=element('button','Muat ulang pilihan akun');accountClubRefresh.type='button';accountClubSave.after(accountClubRefresh);
-async function loadAccountClub(){accountClubRefresh.disabled=true;accountClubRefresh.textContent='Memuat…';accountClubStatus.textContent='Membaca pilihan terbaru dari akun…';try{const data=await communityAPI('/api/me/club');accountClubTitle.textContent=data.clubName||'Belum memilih klub';accountClubInput.value=data.clubName||'';accountClubStatus.textContent=data.clubName?'Pilihan dibaca dari database akun pada '+new Date().toLocaleTimeString('id-ID')+'.':'Masukkan nama klub lalu simpan ke akun.'}catch(error){accountClubTitle.textContent='Pilihan akun belum tersedia';accountClubInput.value='';accountClubStatus.textContent=error.message}finally{accountClubRefresh.disabled=false;accountClubRefresh.textContent='Muat ulang pilihan akun'}}
-accountClubSave.onclick=async()=>{const name=accountClubInput.value.trim();if(name.length<2||name.length>80){accountClubStatus.textContent='Isi nama klub 2–80 karakter.';return}accountClubSave.disabled=true;accountClubStatus.textContent='Menyimpan ke akun…';try{const data=await communityAPI('/api/me/club','PUT',{clubName:name});accountClubTitle.textContent=data.clubName;accountClubInput.value=data.clubName;if(orbissAuthUser)orbissAuthUser.clubName=data.clubName;accountClubStatus.textContent='Klub favorit berhasil disimpan di D1 untuk akunmu.'}catch(error){accountClubStatus.textContent=error.message}finally{accountClubSave.disabled=false}};
+async function loadAccountClub(){accountClubRefresh.disabled=true;accountClubRefresh.textContent='Memuat…';accountClubStatus.textContent='Membaca pilihan terbaru dari akun…';try{const data=await communityAPI('/api/me/club');accountClubTitle.textContent=data.clubName||'Belum memilih klub';accountClubTitle.toggleAttribute('data-no-i18n',!!data.clubName);accountClubInput.value=data.clubName||'';accountClubStatus.textContent=data.clubName?'Pilihan dibaca dari database akun pada '+new Date().toLocaleTimeString('id-ID')+'.':'Masukkan nama klub lalu simpan ke akun.'}catch(error){accountClubTitle.textContent='Pilihan akun belum tersedia';accountClubInput.value='';accountClubStatus.textContent=error.message}finally{accountClubRefresh.disabled=false;accountClubRefresh.textContent='Muat ulang pilihan akun'}}
+accountClubSave.onclick=async()=>{const name=accountClubInput.value.trim();if(name.length<2||name.length>80){accountClubStatus.textContent='Isi nama klub 2–80 karakter.';return}accountClubSave.disabled=true;accountClubStatus.textContent='Menyimpan ke akun…';try{const data=await communityAPI('/api/me/club','PUT',{clubName:name});accountClubTitle.textContent=data.clubName;accountClubTitle.setAttribute('data-no-i18n','');accountClubInput.value=data.clubName;if(orbissAuthUser)orbissAuthUser.clubName=data.clubName;accountClubStatus.textContent='Klub favorit berhasil disimpan di D1 untuk akunmu.'}catch(error){accountClubStatus.textContent=error.message}finally{accountClubSave.disabled=false}};
 accountClubRefresh.onclick=loadAccountClub;window.addEventListener('hashchange',()=>{if(location.hash==='#my-club')loadAccountClub()});if(location.hash==='#my-club')loadAccountClub();
 const secondaryClubCard=document.querySelectorAll('#my-club .card')[1];if(secondaryClubCard){const paragraph=secondaryClubCard.querySelector('p');if(paragraph)paragraph.textContent='Preferensi klub tersimpan di akun. Jadwal, berita khusus klub, dan statistik belum memiliki sumber data terhubung.'}
 </script><style>#my-club .card>button{margin:8px 8px 0 0;white-space:nowrap}#my-club .note{line-height:1.6}#my-club #clubName{overflow-wrap:anywhere}</style>
@@ -246,7 +246,7 @@ if(youtubeStage){
  const resetVideo=element('button','Hentikan / muat ulang player');resetVideo.type='button';demoControls.append(source,resetVideo);
  const embedNote=element('p','Jika video tidak dapat diputar atau penyematan ditolak oleh YouTube, gunakan tautan sumber. Pembatasan pemilik video, wilayah, dan usia tetap berlaku.','note');
  youtubePlayer.after(demoControls,embedNote);
- function youtubePlaceholder(){youtubePlayer.replaceChildren();const cover=element('div',undefined,'youtube-start');cover.append(element('span','VIDEO DEMO • BUKAN KLAIM SIARAN RESMI','badge'),element('h2','Tonton demo di ORBISS'),element('p','Tekan tombol untuk memuat pemutar YouTube. Saat dimuat, browser akan terhubung ke layanan YouTube.'));const start=element('button','Muat pemutar YouTube','primary');start.type='button';start.onclick=()=>{const frame=document.createElement('iframe');frame.title='Video demo YouTube pada ORBISS';frame.src='https://www.youtube-nocookie.com/embed/l7zkNFVLCI8?playsinline=1';frame.allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';frame.allowFullscreen=true;frame.referrerPolicy='strict-origin-when-cross-origin';youtubePlayer.replaceChildren(frame)};cover.append(start);youtubePlayer.append(cover)}
+ function youtubePlaceholder(){youtubePlayer.replaceChildren();const cover=element('div',undefined,'youtube-start');cover.append(element('span','VIDEO DEMO • BUKAN KLAIM SIARAN RESMI','badge'),element('h2','Tonton demo di ORBISS'),element('p','Tekan tombol untuk memuat pemutar YouTube. Saat dimuat, browser akan terhubung ke layanan YouTube.'));const start=element('button','Muat pemutar YouTube','primary');start.type='button';start.onclick=()=>{const frame=document.createElement('iframe');frame.title='Video demo YouTube pada ORBISS';frame.src='https://www.youtube-nocookie.com/embed/l7zkNFVLCI8?playsinline=1&hl='+(window.orbissLocale||'id');frame.allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';frame.allowFullscreen=true;frame.referrerPolicy='strict-origin-when-cross-origin';youtubePlayer.replaceChildren(frame)};cover.append(start);youtubePlayer.append(cover)}
  resetVideo.onclick=youtubePlaceholder;youtubePlaceholder();
  const badges=document.querySelector('#live>.feature-status');if(badges)badges.replaceChildren(element('span','YouTube • Demo player'),element('span','Status siaran belum diverifikasi'));
 }
@@ -258,8 +258,8 @@ if(managedStage){
  const managedPlayer=managedStage.querySelector('.player');const controls=managedStage.querySelector('.youtube-controls');const sourceLink=controls.querySelector('a');const resetButton=controls.querySelector('button');
  const manageButton=element('button','Kelola video');manageButton.type='button';manageButton.hidden=true;const reloadVideoButton=element('button','Muat ulang sumber');reloadVideoButton.type='button';controls.append(reloadVideoButton,manageButton);
  const sourceStatus=element('p','Memuat sumber video dari D1…','note');sourceStatus.setAttribute('role','status');controls.after(sourceStatus);let managedConfig=null;
- function managedPlaceholder(){managedPlayer.replaceChildren();const cover=element('div',undefined,'youtube-start');if(!managedConfig){cover.append(element('h2','Sumber belum tersedia'),element('p','Muat ulang sumber setelah konfigurasi database siap.'));managedPlayer.append(cover);return}cover.append(element('span','YOUTUBE • VIDEO DEMO','badge'),element('h2',managedConfig.title),element('p','Klik untuk memuat YouTube. Ini bukan konfirmasi siaran langsung atau izin penyematan.'));const play=element('button','Muat pemutar YouTube','primary');play.type='button';play.onclick=()=>{const iframe=document.createElement('iframe');iframe.title=managedConfig.title+' — demo YouTube';iframe.src='https://www.youtube-nocookie.com/embed/'+managedConfig.videoId+'?playsinline=1';iframe.allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';iframe.allowFullscreen=true;iframe.referrerPolicy='strict-origin-when-cross-origin';managedPlayer.replaceChildren(iframe)};cover.append(play);managedPlayer.append(cover)}
- async function loadManagedVideo(force=false){reloadVideoButton.disabled=true;sourceStatus.textContent='Membaca sumber video dari D1…';try{const data=await communityAPI('/api/live/video');if(!/^[A-Za-z0-9_-]{11}$/.test(data.videoId)||typeof data.title!=='string')throw new Error('Respons konfigurasi video tidak valid.');const changed=!managedConfig||managedConfig.videoId!==data.videoId;managedConfig=data;sourceLink.href='https://youtu.be/'+data.videoId;sourceLink.hidden=false;const heading=managedStage.querySelector('.stream-heading h2');if(heading)heading.textContent=data.title;if(changed||force)managedPlaceholder();sourceStatus.textContent='Sumber demo dari D1. Terakhir disimpan '+new Date(data.updatedAt*1000).toLocaleString('id-ID')+'. Status pemutaran belum diverifikasi.'}catch(error){managedConfig=null;sourceLink.hidden=true;managedPlaceholder();sourceStatus.textContent=error.message}finally{reloadVideoButton.disabled=false}}
+ function managedPlaceholder(){managedPlayer.replaceChildren();const cover=element('div',undefined,'youtube-start');if(!managedConfig){cover.append(element('h2','Sumber belum tersedia'),element('p','Muat ulang sumber setelah konfigurasi database siap.'));managedPlayer.append(cover);return}cover.append(element('span','YOUTUBE • VIDEO DEMO','badge'),orbissOriginal('h2',managedConfig.title),element('p','Klik untuk memuat YouTube. Ini bukan konfirmasi siaran langsung atau izin penyematan.'));const play=element('button','Muat pemutar YouTube','primary');play.type='button';play.onclick=()=>{const iframe=document.createElement('iframe');iframe.title=managedConfig.title+' — demo YouTube';iframe.src='https://www.youtube-nocookie.com/embed/'+managedConfig.videoId+'?playsinline=1&hl='+(window.orbissLocale||'id');iframe.allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';iframe.allowFullscreen=true;iframe.referrerPolicy='strict-origin-when-cross-origin';managedPlayer.replaceChildren(iframe)};cover.append(play);managedPlayer.append(cover)}
+ async function loadManagedVideo(force=false){reloadVideoButton.disabled=true;sourceStatus.textContent='Membaca sumber video dari D1…';try{const data=await communityAPI('/api/live/video');if(!/^[A-Za-z0-9_-]{11}$/.test(data.videoId)||typeof data.title!=='string')throw new Error('Respons konfigurasi video tidak valid.');const changed=!managedConfig||managedConfig.videoId!==data.videoId;managedConfig=data;sourceLink.href='https://youtu.be/'+data.videoId;sourceLink.hidden=false;const heading=managedStage.querySelector('.stream-heading h2');if(heading){heading.textContent=data.title;heading.setAttribute('data-no-i18n','');}if(changed||force)managedPlaceholder();sourceStatus.textContent='Sumber demo dari D1. Terakhir disimpan '+new Date(data.updatedAt*1000).toLocaleString('id-ID')+'. Status pemutaran belum diverifikasi.'}catch(error){managedConfig=null;sourceLink.hidden=true;managedPlaceholder();sourceStatus.textContent=error.message}finally{reloadVideoButton.disabled=false}}
  resetButton.onclick=managedPlaceholder;reloadVideoButton.onclick=()=>loadManagedVideo(true);
  async function updateVideoManagementAccess(){try{const data=await communityAPI('/api/moderation/session');manageButton.hidden=!data.isModerator}catch{manageButton.hidden=true}}
  manageButton.onclick=async()=>{openUtility('Kelola video demo');utilityContent.append(element('p','Sumber ini berlaku untuk seluruh pengunjung. Gunakan video milikmu atau yang boleh disematkan. Menyimpan tautan tidak menjamin YouTube mengizinkan pemutaran di ORBISS.','profile-note'));const form=element('form',undefined,'account-form');const titleLabel=element('label','Judul tampilan');titleLabel.htmlFor='liveVideoTitle';const title=document.createElement('input');title.id='liveVideoTitle';title.required=true;title.maxLength=120;title.value=managedConfig?managedConfig.title:'Video demo ORBISS';const urlLabel=element('label','Tautan video YouTube');urlLabel.htmlFor='liveVideoURL';const url=document.createElement('input');url.id='liveVideoURL';url.type='url';url.required=true;url.maxLength=2048;url.placeholder='https://youtu.be/…';url.value=managedConfig?'https://youtu.be/'+managedConfig.videoId:'';const submit=element('button','Simpan sumber demo','primary');submit.type='submit';const note=element('p','','note');note.setAttribute('role','status');form.append(titleLabel,title,urlLabel,url,submit,note);form.onsubmit=async event=>{event.preventDefault();if(!form.reportValidity())return;submit.disabled=true;note.textContent='Menyimpan sumber ke D1…';try{const saved=await communityAPI('/api/live/video','PUT',{title:title.value.trim(),youtubeUrl:url.value.trim()});note.textContent=saved.message;await loadManagedVideo(true)}catch(error){note.textContent=error.message}finally{submit.disabled=false}};utilityContent.append(form)};
@@ -271,7 +271,7 @@ if(managedStage){
 const newsPage=document.getElementById('news');newsPage.replaceChildren();const newsCategories={general:'Umum',match:'Pertandingan',transfer:'Transfer',club:'Klub'};let publishedNews=[];let selectedNewsCategory='all';
 const newsTools=element('div',undefined,'actions');const reloadNewsButton=element('button','Muat ulang artikel');reloadNewsButton.type='button';const manageNewsButton=element('button','Kelola News');manageNewsButton.type='button';manageNewsButton.hidden=true;newsTools.append(reloadNewsButton,manageNewsButton);
 const newsFilter=element('div',undefined,'actions');newsFilter.style.margin='16px 0';for(const [value,label] of [['all','Semua'],...Object.entries(newsCategories)]){const b=element('button',label,value==='all'?'active':'');b.type='button';b.onclick=()=>{selectedNewsCategory=value;newsFilter.querySelectorAll('button').forEach(button=>button.classList.remove('active'));b.classList.add('active');drawNews()};newsFilter.append(b)}const newsSearchInput=document.createElement('input');newsSearchInput.type='search';newsSearchInput.placeholder='Cari di 20 artikel terbit terbaru';newsSearchInput.setAttribute('aria-label','Cari artikel yang dimuat');const newsResultStatus=element('p','','note');newsResultStatus.setAttribute('role','status');const newsArticles=element('div',undefined,'grid');newsPage.append(element('h1','News'),element('p','Artikel dikelola moderator ORBISS. Belum terhubung ke feed berita otomatis.'),newsTools,newsFilter,newsSearchInput,newsResultStatus,newsArticles);
-function drawNews(){newsArticles.replaceChildren();const query=newsSearchInput.value.trim().toLowerCase();const items=publishedNews.filter(article=>(selectedNewsCategory==='all'||article.category===selectedNewsCategory)&&(article.title+' '+article.summary).toLowerCase().includes(query));newsResultStatus.textContent=items.length+' artikel ditampilkan dari maksimal 20 artikel terbit terbaru.';if(!items.length){newsArticles.append(element('p',publishedNews.length?'Tidak ada artikel yang cocok.':'Belum ada artikel diterbitkan.'));return}for(const article of items){const card=element('article',undefined,'card');card.append(element('span',newsCategories[article.category]||'News','badge'),element('h2',article.title),element('p',article.summary));const read=element('button','Baca artikel');read.type='button';read.onclick=async()=>{openUtility('Artikel ORBISS');const status=element('p','Memuat artikel…');utilityContent.append(status);try{const data=await communityAPI('/api/news/'+encodeURIComponent(article.id));const a=data.article;utilityContent.replaceChildren(element('span',newsCategories[a.category]||'News','badge'),element('h3',a.title),element('p',a.summary));const content=element('p',a.body);content.style.whiteSpace='pre-wrap';utilityContent.append(content);if(a.sourceUrl){const source=document.createElement('a');source.href=a.sourceUrl;source.target='_blank';source.rel='noopener noreferrer';source.textContent='Buka sumber';source.style.color='#65deea';utilityContent.append(source)}}catch(error){status.textContent=error.message}};card.append(read);newsArticles.append(card)}}
+function drawNews(){newsArticles.replaceChildren();const query=newsSearchInput.value.trim().toLowerCase();const items=publishedNews.filter(article=>(selectedNewsCategory==='all'||article.category===selectedNewsCategory)&&(article.title+' '+article.summary).toLowerCase().includes(query));newsResultStatus.textContent=items.length+' artikel ditampilkan dari maksimal 20 artikel terbit terbaru.';if(!items.length){newsArticles.append(element('p',publishedNews.length?'Tidak ada artikel yang cocok.':'Belum ada artikel diterbitkan.'));return}for(const article of items){const card=element('article',undefined,'card');card.append(element('span',newsCategories[article.category]||'News','badge'),orbissOriginal('h2',article.title),orbissOriginal('p',article.summary));const read=element('button','Baca artikel');read.type='button';read.onclick=async()=>{openUtility('Artikel ORBISS');const status=element('p','Memuat artikel…');utilityContent.append(status);try{const data=await communityAPI('/api/news/'+encodeURIComponent(article.id));const a=data.article;utilityContent.replaceChildren(element('span',newsCategories[a.category]||'News','badge'),orbissOriginal('h3',a.title),orbissOriginal('p',a.summary));const content=orbissOriginal('p',a.body);content.style.whiteSpace='pre-wrap';utilityContent.append(content);if(a.sourceUrl){const source=document.createElement('a');source.href=a.sourceUrl;source.target='_blank';source.rel='noopener noreferrer';source.textContent='Buka sumber';source.style.color='#65deea';utilityContent.append(source)}}catch(error){status.textContent=error.message}};card.append(read);newsArticles.append(card)}}
 async function loadNews(){reloadNewsButton.disabled=true;newsResultStatus.textContent='Memuat artikel dari D1…';try{const data=await communityAPI('/api/news');if(!Array.isArray(data.items))throw new Error('Format artikel tidak valid.');publishedNews=data.items;drawNews()}catch(error){newsResultStatus.textContent=error.message}finally{reloadNewsButton.disabled=false}}
 async function refreshNewsAccess(){try{const data=await communityAPI('/api/moderation/session');manageNewsButton.hidden=!data.isModerator}catch{manageNewsButton.hidden=true}}
 manageNewsButton.onclick=async()=>{openUtility('Kelola News');const status=element('p','Memuat daftar…','note');status.setAttribute('role','status');utilityContent.append(status);try{const data=await communityAPI('/api/news/manage');status.textContent='Maksimal 50 artikel terbaru. Draf dan arsip tidak tampil di feed publik.';const picker=document.createElement('select');picker.setAttribute('aria-label','Pilih artikel untuk diedit');picker.append(element('option','Artikel baru'));data.items.forEach((article,index)=>{const option=element('option',article.title+' ['+article.status+']');option.value=String(index+1);picker.append(option)});utilityContent.append(picker);
@@ -281,7 +281,7 @@ picker.onchange=()=>{const index=Number(picker.value||0)-1;editing=index>=0?data
 form.onsubmit=async event=>{event.preventDefault();if(!form.reportValidity())return;const state=event.submitter?.value||'draft';const buttons=actions.querySelectorAll('button');buttons.forEach(b=>b.disabled=true);picker.disabled=true;feedback.textContent='Menyimpan ke D1…';try{const payload={title:title.value.trim(),summary:summary.value.trim(),body:body.value.trim(),category:category.value,sourceUrl:source.value.trim(),status:state,...(editing?{version:editing.version}:{})};const saved=await communityAPI(editing?'/api/news/'+encodeURIComponent(editing.id):'/api/news',editing?'PUT':'POST',payload);editing={...payload,id:saved.id,version:saved.version};current.textContent='Status: '+saved.status+' • versi '+saved.version;feedback.textContent=saved.status==='published'?'Artikel terbit. Pengunjung dapat membacanya.':saved.status==='archived'?'Artikel diarsipkan dan tidak muncul di feed publik.':'Draf tersimpan, belum tampil untuk pengunjung.';await loadNews()}catch(error){feedback.textContent=error.message}finally{buttons.forEach(b=>b.disabled=false);picker.disabled=false;archive.disabled=!editing}};
 }catch(error){status.textContent=error.message}};
 reloadNewsButton.onclick=async()=>{await loadNews();await refreshNewsAccess()};newsSearchInput.oninput=drawNews;window.addEventListener('hashchange',()=>{if(location.hash==='#news'){loadNews();refreshNewsAccess()}});loadNews();refreshNewsAccess();
-</script><style>#news .card{min-width:0}#news .card h2{overflow-wrap:anywhere}#news .actions{flex-wrap:wrap;gap:8px}#news button[hidden]{display:none}#utilityContent textarea{width:100%;line-height:1.6}#utilityContent .account-form .actions button{width:auto}#news input{max-width:100%}</style></body></html>
+</script><style>#news .card{min-width:0}#news .card h2{overflow-wrap:anywhere}#news .actions{flex-wrap:wrap;gap:8px}#news button[hidden]{display:none}#utilityContent textarea{width:100%;line-height:1.6}#utilityContent .account-form .actions button{width:auto}#news input{max-width:100%}</style>
 <style>
 @media(max-width:760px){
 .app>nav#mainNav{display:none!important}.app{padding:0 12px 100px!important}header{padding:10px 0!important;gap:8px}header .logo{font-size:24px}header button{padding:9px 10px;font-size:12px}main{min-width:0}#status:empty{display:none}.page>h1{font-size:28px}.hero{padding:20px!important;min-height:0!important}.hero h1{font-size:32px!important;line-height:1.12}.hero p{font-size:14px}.mobile-feature-grid button{min-height:68px}.bottom{max-width:none;width:100%;padding:7px 6px calc(7px + env(safe-area-inset-bottom));border-radius:12px 12px 0 0}.bottom button{min-height:44px;font-size:11px}.live-workspace{gap:10px}.stream-heading{padding:10px}.stream-heading h2{margin:5px 0}.stream-heading .concept-note{display:none}.youtube-controls{gap:8px;padding:10px 0}.youtube-controls button{white-space:normal;min-height:44px}.workspace-chat{margin:0!important}.workspace-sponsors{margin:0!important}.youtube-start .badge{display:none}.youtube-start h2{font-size:17px}.youtube-start p{font-size:11px!important;margin:4px 0!important}.youtube-start button{min-height:40px}dialog{max-height:85dvh;overflow:auto}input,textarea,select{font-size:16px!important}
@@ -311,3 +311,559 @@ for(const row of document.querySelectorAll('#home .status-table tr')){const butt
 const overview=document.querySelector('#home .status-table');if(overview){const card=overview.parentElement;const heading=card.querySelector('h2');const details=document.createElement('details');const summary=document.createElement('summary');summary.textContent='Status fitur dan keterbatasan';summary.style.cssText='cursor:pointer;min-height:44px;padding:10px 0;color:#65deea;font-size:14px';if(heading)heading.remove();details.append(summary,overview);card.append(details)}
 })();
 </script>
+<style>
+.orbiss-language{display:flex;align-items:center;gap:5px}.orbiss-language select{max-width:110px;min-height:40px;padding:8px 6px;margin:0;border:1px solid #31506d;border-radius:10px;background:#08182b;color:#f4f8fb;font-size:12px}.orbiss-language label{font-size:12px;color:#afc1d2}@media(max-width:760px){header{flex-wrap:wrap!important;gap:8px!important}header .header-controls{flex-wrap:wrap;justify-content:flex-end;flex:1}.orbiss-language{order:3;width:100%;justify-content:flex-end}.orbiss-language select{max-width:150px;font-size:12px!important;min-height:36px}.orbiss-language label{font-size:11px}html[lang="zh-CN"] button{line-height:1.4}.feature-status span{max-width:100%;overflow-wrap:anywhere}}
+</style>
+<script>
+(()=>{
+'use strict';
+const dictionaryText=String.raw`
+HOME	Home	首页
+Home	Home	首页
+NEWS	News	新闻
+News	News	新闻
+LIVE	Live	直播
+Live	Live	直播
+AI	AI	人工智能
+WATCH PARTY	Watch Party	一起看球
+Watch Party	Watch Party	一起看球
+VIDEO	Video	视频
+Video	Video	视频
+COMMUNITY	Community	社区
+Community	Community	社区
+MY CLUB	My Club	我的球队
+My Club	My Club	我的球队
+PREMIUM	Premium	高级会员
+Premium	Premium	高级会员
+More	More	更多
+PRODUK & PARTNER	PRODUCTS & PARTNERS	产品与合作伙伴
+Produk & Partner	Products & Partners	产品与合作伙伴
+Cari	Search	搜索
+Buat akun	Create account	创建账户
+Akun	Account	账户
+Tutup	Close	关闭
+Selesai	Done	完成
+Masuk	Sign in	登录
+Daftar	Sign up	注册
+Keluar	Sign out	退出登录
+Kirim	Send	发送
+Simpan	Save	保存
+Semua	All	全部
+Umum	General	综合
+Pertandingan	Matches	比赛
+Transfer	Transfers	转会
+Klub	Clubs	球队
+Ringkasan	Overview	概览
+Statistik	Statistics	统计
+Susunan pemain	Lineups	首发阵容
+Kategori	Category	分类
+Alasan	Reason	原因
+Lainnya	Other	其他
+Spam	Spam	垃圾信息
+Laporkan	Report	举报
+Moderasi	Moderation	内容审核
+Pulihkan	Restore	恢复
+Dipulihkan	Restored	已恢复
+Memulihkan…	Restoring…	正在恢复…
+Memuat…	Loading…	正在加载…
+Mengirim…	Sending…	正在发送…
+Disukai	Liked	已点赞
+Suka	Like	点赞
+Pilot terbatas	Limited pilot	小范围试用
+Video demo, bukan siaran langsung	Demo video, not a live broadcast	演示视频，并非实时直播
+Ringkasan ORBISS	ORBISS overview	ORBISS 概览
+Prototipe, bukan layanan aktif	Prototype, not an active service	原型，并非正式服务
+FOOTBALL • LIVE • AI • COMMUNITY	FOOTBALL • LIVE • AI • COMMUNITY	足球 • 直播 • 人工智能 • 社区
+Football.	Football.	足球。
+Live. AI. Community.	Live. AI. Community.	直播。人工智能。社区。
+Ikuti pertandingan, dukung klubmu, dan berbagi bersama penggemar sepak bola.	Follow matches, support your club, and share with football fans.	关注比赛、支持你的球队，与球迷交流。
+Gabung Community	Join Community	加入社区
+Jelajahi Live	Explore Live	查看直播中心
+COMMUNITY FIRST	COMMUNITY FIRST	社区优先
+Cerita fans. Suara komunitas.	Fan stories. Community voices.	球迷故事，社区心声。
+Diskusi pertandingan dan cerita klub. Postingan prototipe hanya tersimpan di browser ini.	Discuss matches and club stories. Account posts are stored in the database.	讨论比赛和球队故事，账户帖子保存在数据库中。
+Buka Community	Open Community	打开社区
+LIVE CENTER	LIVE CENTER	直播中心
+Live Center	Live Center	直播中心
+Pusat pertandingan	Match center	比赛中心
+Halaman khusus player dan jadwal, terpisah dari Home. Sumber siaran belum terhubung.	A dedicated player and schedule page. Official broadcast sources are not connected.	独立播放器及赛程页面，尚未接入官方直播源。
+Buka Live	Open Live	打开直播中心
+Buka Live Center	Open Live Center	打开直播中心
+Watch. Shop. Support.	Watch. Shop. Support.	观看。选购。支持。
+Ruang konsep untuk produk dan iklan, tanpa sponsor atau penawaran aktif.	A concept area for products and ads, with no active sponsors or offers.	产品与广告概念区，目前没有实际赞助商或有效优惠。
+Jelajahi konsep produk	Explore product concept	查看产品概念
+MATCH CENTER • SUMBER DATA BELUM TERHUBUNG	MATCH CENTER • DATA SOURCE NOT CONNECTED	比赛中心 • 尚未接入数据源
+Pertandingan jadi pusat cerita.	The match is at the heart of the story.	以比赛为故事核心。
+Nonton dari player lokal, lalu lanjutkan percakapan di Community. Jadwal dan siaran resmi menunggu integrasi sumber.	Watch a demo, then continue the conversation in Community. Official schedules and broadcasts await source integration.	观看演示后，前往社区继续交流。官方赛程及直播仍待接入。
+Status fitur dan keterbatasan	Feature status and limitations	功能状态与限制
+Kesiapan fitur	Feature readiness	功能就绪状态
+Ringkasan pilot ORBISS	ORBISS pilot overview	ORBISS 试用概览
+Video demo YouTube; bukan siaran pertandingan langsung	YouTube demo video, not a live match broadcast	YouTube 演示视频，非比赛直播
+Posting, suka dan komentar tersimpan di database	Posts, likes and comments are stored in the database	帖子、点赞和评论保存在数据库中
+Artikel editorial moderator; bukan feed otomatis	Moderator-written articles, not an automatic feed	审核员编辑的文章，非自动新闻源
+Pilihan klub tersimpan pada akun	Club preference saved to your account	球队偏好保存在账户中
+Tempat menonton dan menuju diskusi pertandingan.	Watch here and join match discussions.	在此观看并参与比赛讨论。
+YouTube • Demo player	YouTube • Demo player	YouTube • 演示播放器
+Status siaran belum diverifikasi	Broadcast status unverified	直播状态未经核实
+YOUTUBE • VIDEO DEMO	YOUTUBE • DEMO VIDEO	YOUTUBE • 演示视频
+Status siaran langsung tidak diperiksa. Video ini digunakan untuk menguji player.	Live status is not checked. This video is used to test the player.	未核实实时直播状态，此视频仅用于测试播放器。
+Klik untuk memuat YouTube. Ini bukan konfirmasi siaran langsung atau izin penyematan.	Tap to load YouTube. This does not confirm live status or embedding permission.	点击加载 YouTube，不代表已确认直播状态或嵌入许可。
+Muat pemutar YouTube	Load YouTube player	加载 YouTube 播放器
+Hentikan / muat ulang player	Stop / reset player	停止 / 重置播放器
+Muat ulang sumber	Reload source	重新加载视频源
+Buka sumber di YouTube	Open source on YouTube	在 YouTube 打开源视频
+Kelola video	Manage video	管理视频
+Kelola video demo	Manage demo video	管理演示视频
+Perbesar video	Expand video	放大视频
+Kembali ke Live	Back to Live	返回直播中心
+Sumber belum tersedia	Source unavailable	视频源暂不可用
+Muat ulang sumber setelah konfigurasi database siap.	Reload the source when database setup is ready.	数据库配置就绪后，请重新加载视频源。
+Membaca sumber video dari D1…	Reading video source from D1…	正在从 D1 读取视频源…
+Memuat sumber video dari D1…	Loading video source from D1…	正在从 D1 加载视频源…
+Judul tampilan	Display title	显示标题
+Tautan video YouTube	YouTube video link	YouTube 视频链接
+Simpan sumber demo	Save demo source	保存演示视频源
+Menyimpan sumber ke D1…	Saving source to D1…	正在保存视频源到 D1…
+Sumber ini berlaku untuk seluruh pengunjung. Gunakan video milikmu atau yang boleh disematkan. Menyimpan tautan tidak menjamin YouTube mengizinkan pemutaran di ORBISS.	This source applies to all visitors. Use a video you own or may embed. Saving a link does not guarantee YouTube playback in ORBISS.	此视频源适用于所有访客。请使用你拥有或获准嵌入的视频，保存链接并不保证可在 ORBISS 播放。
+Jika video tidak dapat diputar atau penyematan ditolak oleh YouTube, gunakan tautan sumber. Pembatasan pemilik video, wilayah, dan usia tetap berlaku.	If playback or embedding is blocked, use the source link. Owner, region and age restrictions still apply.	若无法播放或 YouTube 禁止嵌入，请使用源链接。视频所有者、地区及年龄限制仍然适用。
+Diskusi pertandingan	Match discussion	比赛讨论
+CHAT BELUM TERHUBUNG	CHAT NOT CONNECTED	聊天尚未接通
+Chat pertandingan belum terhubung. Gunakan Community untuk posting dan komentar dengan akun ORBISS.	Match chat is not connected. Use Community to post and comment with your ORBISS account.	比赛聊天尚未接通。请使用 ORBISS 账户在社区发帖和评论。
+Diskusi bersama fans	Discuss with fans	与球迷讨论
+Jadwal pertandingan	Match schedule	比赛赛程
+Belum ada sumber jadwal terhubung. Skor dan status langsung tidak disimulasikan sebagai data nyata.	No schedule source is connected. Scores and live status are not simulated as real data.	尚未接入赛程源，不会将模拟比分和直播状态当作真实数据。
+Detail pertandingan	Match details	比赛详情
+Pilih tab untuk melihat kesiapan konten.	Choose a tab to see content availability.	选择选项卡查看内容状态。
+Ringkasan pertandingan belum tersedia karena sumber pertandingan belum terhubung.	Match overview is unavailable because the match source is not connected.	尚未接入比赛源，因此暂无比赛概览。
+Susunan pemain akan ditampilkan setelah data pertandingan tersambung.	Lineups will appear when match data is connected.	接入比赛数据后将显示首发阵容。
+Statistik belum tersedia. Tidak ada angka atau skor yang dibuat sebagai data nyata.	Statistics are unavailable. No figures or scores are fabricated as real data.	暂无统计数据，不会编造数字或比分冒充真实数据。
+Partner & Aktivitas	Partners & Activities	合作伙伴与活动
+Partner Spotlight	Partner Spotlight	合作伙伴展示
+KONSEP • BELUM AKTIF	CONCEPT • NOT ACTIVE	概念 • 尚未启用
+Slot promosi produk sepak bola.	A space for football product promotions.	足球产品推广位。
+Polling pertandingan	Match poll	比赛投票
+Konsep polling, belum ada suara nyata.	A poll concept, with no real votes yet.	投票概念，目前没有实际投票。
+Pengalaman penggemar	Fan experiences	球迷体验
+Slot penawaran partner mendatang.	Space for future partner offers.	未来合作伙伴优惠展示位。
+Tidak ada sponsor resmi atau penawaran aktif yang diklaim pada prototipe ini.	This prototype does not claim official sponsors or active offers.	此原型不宣称拥有官方赞助商或有效优惠。
+Uji player dengan video lokal	Test player with a local video	使用本地视频测试播放器
+Putar video dari perangkat	Play video from your device	播放设备中的视频
+Pilih file video dari perangkatmu. File diputar di browser dan tidak diunggah ke ORBISS. Ini bukan siaran pertandingan langsung.	Choose a video from your device. It plays in your browser and is not uploaded to ORBISS. This is not a live match broadcast.	从设备中选择视频，仅在浏览器播放，不会上传至 ORBISS，也不是比赛直播。
+Pilih video dari perangkat	Choose video from device	选择设备视频
+Tutup video lokal	Close local video	关闭本地视频
+Format video ini tidak bisa diputar oleh browser ini. Coba file MP4 yang kompatibel.	This browser cannot play this video format. Try a compatible MP4 file.	此浏览器无法播放该格式，请尝试兼容的 MP4 文件。
+Belum ada video yang ditambahkan.	No videos have been added.	尚未添加视频。
+Pemutar file lokal	Local file player	本地文件播放器
+Katalog video belum terhubung	Video catalog not connected	视频目录尚未接入
+Demo antarmuka	Interface demo	界面演示
+Layanan AI belum terhubung	AI service not connected	人工智能服务尚未接入
+DEMO ANTARMUKA • AI BELUM TERHUBUNG	INTERFACE DEMO • AI NOT CONNECTED	界面演示 • 人工智能尚未接入
+Ruang untuk pertanyaan tentang klub, taktik, dan pertandingan.	A space for questions about clubs, tactics and matches.	用于提出有关球队、战术和比赛的问题。
+Pertanyaan sepak bola	Football question	足球问题
+Apa yang ingin kamu tanyakan?	What would you like to ask?	你想问什么？
+Coba tampilan jawaban	Preview answer interface	预览回答界面
+Tulis pertanyaan terlebih dahulu.	Enter a question first.	请先输入问题。
+AI Analysis	AI Analysis	人工智能分析
+Nonton bersama komunitas	Watch with the community	与社区一起观看
+Konsep ruang Jakarta Fans dan Club Night. Belum ada ruang aktif, sinkronisasi video, chat, atau peserta terhubung.	Concept rooms for Jakarta Fans and Club Night. No active rooms, video sync, chat or connected participants yet.	Jakarta Fans 和 Club Night 房间概念，目前没有已启用房间、视频同步、聊天或已连接参与者。
+Pratinjau status	Preview status	预览状态
+Watch Party belum terhubung. Tidak ada ruang yang diikuti.	Watch Party is not connected. You have not joined a room.	一起看球尚未接通，你尚未加入房间。
+Konsep ruang	Room concept	房间概念
+Sinkronisasi & chat belum terhubung	Sync & chat not connected	同步及聊天尚未接通
+RUANG CONTOH • BELUM AKTIF	SAMPLE ROOM • NOT ACTIVE	示例房间 • 尚未启用
+Rencana ruang nonton bersama. Belum ada peserta, chat, atau video tersinkronisasi.	Planned watch-together room. No participants, chat or synchronized video yet.	计划中的一起观看房间，目前没有参与者、聊天或同步视频。
+Lihat kesiapan ruang	View room availability	查看房间状态
+Posting dan komentar tersimpan di D1. Nama tampilan dan konten terlihat oleh pengunjung. Uji terbatas, bukan peluncuran publik.	Posts and comments are stored in D1. Display names and content are visible to visitors. Limited testing, not a public launch.	帖子和评论保存在 D1 中，访客可查看显示名称及内容。仅限小范围测试，并非公开上线。
+Memeriksa akun…	Checking account…	正在检查账户…
+Bagikan pendapatmu	Share your thoughts	分享你的想法
+Tulis tentang sepak bola, tanpa data pribadi.	Write about football, without personal information.	讨论足球，请勿填写个人敏感信息。
+Kirim postingan	Publish post	发布帖子
+Postingan lokal lama tidak diunggah. Sebelum peluncuran publik masih diperlukan pelaporan dan moderasi operasional.	Old local posts are not uploaded. Reporting and moderation operations are still needed before public launch.	旧的本地帖子不会上传，公开上线前仍需完善举报与审核运营。
+Feed online	Online feed	在线动态
+Muat ulang feed	Reload feed	重新加载动态
+Cari di 20 postingan terbaru	Search the latest 20 posts	搜索最新 20 条帖子
+Cari di postingan yang dimuat	Search loaded posts	搜索已加载帖子
+Menampilkan maksimal 20 postingan terbaru. Komentar maksimal 50 terbaru per postingan.	Shows up to 20 latest posts and up to 50 latest comments per post.	最多显示最新 20 条帖子，每条最多显示最新 50 条评论。
+Baca feed tanpa masuk. Untuk mengirim, buka Buat akun lalu Masuk.	Read without signing in. To post, open Create account and sign in.	无需登录即可阅读。发帖前请打开创建账户并登录。
+Sesi belum dapat diperiksa. Periksa koneksi.	Unable to check your session. Check your connection.	暂时无法检查会话，请检查网络连接。
+Tidak ada kecocokan pada postingan yang dimuat.	No matches in the loaded posts.	已加载帖子中无匹配内容。
+Belum ada postingan online. Jadilah yang pertama.	No online posts yet. Be the first.	暂无在线帖子，来发布第一条吧。
+Komentar maksimal 500 karakter	Comment, up to 500 characters	评论最多 500 个字符
+Memuat komentar…	Loading comments…	正在加载评论…
+Komentar dari database.	Comments loaded from the database.	评论已从数据库加载。
+Belum ada komentar.	No comments yet.	暂无评论。
+Tulis postingan terlebih dahulu.	Write a post first.	请先填写帖子内容。
+Mengirim ke database…	Sending to the database…	正在发送至数据库…
+Postingan berhasil disimpan di D1.	Post saved to D1.	帖子已保存至 D1。
+Laporkan konten	Report content	举报内容
+Laporan dikirim untuk ditinjau moderator. Konten tidak otomatis dihapus. Jangan sertakan data pribadi.	Reports are sent for moderator review. Content is not automatically deleted. Do not include personal information.	举报将提交审核员处理，内容不会自动删除。请勿填写个人敏感信息。
+Pelecehan atau konten mengganggu	Abuse or harmful content	骚扰或不当内容
+Penjelasan opsional, maksimal 500 karakter	Optional details, up to 500 characters	补充说明（选填），最多 500 个字符
+Penjelasan laporan	Report details	举报说明
+Kirim laporan	Submit report	提交举报
+Mengirim laporan…	Submitting report…	正在提交举报…
+Laporan tercatat	Report recorded	举报已记录
+Antrean moderasi	Moderation queue	审核队列
+Maksimal 50 laporan menunggu tinjauan. Identitas pelapor tidak ditampilkan.	Up to 50 reports awaiting review. Reporter identities are not displayed.	最多显示 50 条待审核举报，不显示举报者身份。
+Tidak ada laporan menunggu tinjauan.	No reports awaiting review.	暂无待审核举报。
+Laporan postingan	Post report	帖子举报
+Laporan komentar	Comment report	评论举报
+Konten tidak tersedia	Content unavailable	内容不可用
+Sembunyikan konten	Hide content	隐藏内容
+Tutup laporan	Dismiss report	关闭举报
+Konten disembunyikan, bukan dihapus. Tindakan dicatat.	Content hidden, not deleted. Action recorded.	内容已隐藏，并未删除。操作已记录。
+Laporan ditutup. Konten tetap terlihat. Tindakan dicatat.	Report dismissed. Content remains visible. Action recorded.	举报已关闭，内容仍可见。操作已记录。
+Konten tersembunyi	Hidden content	已隐藏内容
+Maksimal 50 konten tersembunyi terbaru. Pemulihan dicatat tanpa menghapus riwayat laporan.	Up to 50 latest hidden items. Restorations are logged without deleting report history.	最多显示最新 50 条已隐藏内容。恢复操作将记录，且不会删除举报历史。
+Tidak ada konten tersembunyi pada daftar ini.	No hidden content in this list.	此列表中没有已隐藏内容。
+Postingan tersembunyi	Hidden post	已隐藏帖子
+Komentar tersembunyi	Hidden comment	已隐藏评论
+Postingan induk masih tersembunyi. Memulihkan komentar saja tidak akan membuatnya tampil publik.	The parent post is still hidden. Restoring the comment alone will not make it public.	所属帖子仍被隐藏，仅恢复评论不会使其公开显示。
+Artikel dikelola moderator ORBISS. Belum terhubung ke feed berita otomatis.	Articles are managed by ORBISS moderators. No automatic news feed is connected.	文章由 ORBISS 审核员管理，尚未接入自动新闻源。
+Muat ulang artikel	Reload articles	重新加载文章
+Kelola News	Manage News	管理新闻
+Cari di 20 artikel terbit terbaru	Search the latest 20 published articles	搜索最新 20 篇已发布文章
+Cari artikel yang dimuat	Search loaded articles	搜索已加载文章
+Tidak ada artikel yang cocok.	No matching articles.	没有匹配的文章。
+Belum ada artikel diterbitkan.	No published articles yet.	尚无已发布文章。
+Baca artikel	Read article	阅读全文
+Artikel ORBISS	ORBISS article	ORBISS 文章
+Memuat artikel…	Loading article…	正在加载文章…
+Buka sumber	Open source	查看来源
+Memuat artikel dari D1…	Loading articles from D1…	正在从 D1 加载文章…
+Memuat daftar…	Loading list…	正在加载列表…
+Maksimal 50 artikel terbaru. Draf dan arsip tidak tampil di feed publik.	Up to 50 latest articles. Drafts and archived articles do not appear in the public feed.	最多显示最新 50 篇文章，草稿及存档不会显示在公开动态中。
+Pilih artikel untuk diedit	Select article to edit	选择要编辑的文章
+Artikel baru	New article	新文章
+Judul, maksimal 150 karakter	Title, up to 150 characters	标题，最多 150 个字符
+Ringkasan, maksimal 500 karakter	Summary, up to 500 characters	摘要，最多 500 个字符
+Isi artikel, maksimal 3.000 karakter	Body, up to 3,000 characters	正文，最多 3,000 个字符
+Tautan sumber HTTPS, opsional	HTTPS source link, optional	HTTPS 来源链接（选填）
+Simpan draf	Save draft	保存草稿
+Terbitkan	Publish	发布
+Arsipkan	Archive	存档
+Menyimpan ke D1…	Saving to D1…	正在保存至 D1…
+Artikel terbit. Pengunjung dapat membacanya.	Article published. Visitors can read it.	文章已发布，访客可以阅读。
+Artikel diarsipkan dan tidak muncul di feed publik.	Article archived and removed from the public feed.	文章已存档，不再显示于公开动态。
+Draf tersimpan, belum tampil untuk pengunjung.	Draft saved, not visible to visitors.	草稿已保存，访客暂不可见。
+Nama klub favorit	Favorite club name	喜爱球队名称
+Nama klub favoritmu	Your favorite club name	你喜爱的球队名称
+Belum memilih klub	No club selected	尚未选择球队
+Simpan ke akun	Save to account	保存到账户
+Pilihan tersimpan di akun ORBISS pada D1. Ini preferensi penggemar, bukan keanggotaan resmi klub.	Saved to your ORBISS account in D1. This is a fan preference, not official club membership.	偏好保存在 D1 的 ORBISS 账户中，仅为球迷偏好，不代表官方球队会员资格。
+Memuat pilihan akun…	Loading account preference…	正在加载账户偏好…
+Muat ulang pilihan akun	Reload account preference	重新加载账户偏好
+Membaca pilihan terbaru dari akun…	Reading latest account preference…	正在读取最新账户偏好…
+Masukkan nama klub lalu simpan ke akun.	Enter a club name and save it to your account.	输入球队名称并保存至账户。
+Pilihan akun belum tersedia	Account preference unavailable	账户偏好暂不可用
+Isi nama klub 2–80 karakter.	Enter a club name of 2–80 characters.	请输入 2–80 个字符的球队名称。
+Menyimpan ke akun…	Saving to account…	正在保存到账户…
+Klub favorit berhasil disimpan di D1 untuk akunmu.	Favorite club saved to your account in D1.	喜爱球队已保存至 D1 中的账户。
+Ruang klubmu	Your club space	你的球队空间
+Preferensi klub tersimpan di akun. Jadwal, berita khusus klub, dan statistik belum memiliki sumber data terhubung.	Your club preference is saved to your account. Club schedules, news and statistics have no connected data source yet.	球队偏好已保存在账户中，球队赛程、新闻及统计尚未接入数据源。
+Diskusi di Community	Discuss in Community	前往社区讨论
+Konsep commerce	Commerce concept	商业概念
+Produk & checkout belum terhubung	Products & checkout not connected	产品及结账尚未接入
+Konsep commerce di dalam ORBISS, bukan checkout aktif.	Commerce concept inside ORBISS, not an active checkout.	ORBISS 内的商业概念，并非已启用的结账服务。
+PRODUK CONTOH	SAMPLE PRODUCT	示例产品
+Jersey penggemar	Fan jersey	球迷球衣
+Harga, stok, dan produk asli belum terhubung.	Real prices, stock and products are not connected.	尚未接入实际价格、库存及产品。
+Lihat status produk	View product status	查看产品状态
+Produk contoh. Tidak ditambahkan ke keranjang.	Sample product. Not added to a cart.	示例产品，未加入购物车。
+RUANG PARTNER	PARTNER SPACE	合作伙伴区域
+Perlengkapan sepak bola	Football equipment	足球装备
+Slot untuk mitra dan produk mendatang. Bukan kemitraan resmi.	Space for future partners and products. Not an official partnership.	未来合作伙伴及产品展示位，不代表正式合作关系。
+Penempatan partner	Partner placement	合作伙伴展示
+PARTNER SPOTLIGHT • DEMO	PARTNER SPOTLIGHT • DEMO	合作伙伴展示 • 演示
+Iklan dan produk ditampilkan terpisah dari diskusi. Mitra, stok, harga, serta pembayaran belum terhubung.	Ads and products are separate from discussions. Partners, stock, prices and payments are not connected.	广告与产品独立于讨论展示，尚未接入合作伙伴、库存、价格及支付。
+KONSEP • BELUM DIJUAL	CONCEPT • NOT FOR SALE	概念 • 尚未出售
+Lebih dekat dengan permainan.	Closer to the game.	更贴近比赛。
+Rencana konten eksklusif, fitur komunitas, dan bantuan AI. Belum ada langganan, pembayaran, atau akses premium aktif.	Planned exclusive content, community features and AI assistance. No active subscriptions, payments or premium access.	计划提供专属内容、社区功能及人工智能辅助。目前未启用订阅、支付或高级会员权限。
+Lihat status Premium	View Premium status	查看高级会员状态
+Premium masih konsep. Tidak ada pembayaran yang dilakukan.	Premium is still a concept. No payment is made.	高级会员仍属概念，不会进行支付。
+Pratinjau manfaat	Benefits preview	权益预览
+Langganan belum tersedia	Subscriptions unavailable	订阅暂不可用
+Rencana manfaat Premium	Planned Premium benefits	计划中的高级会员权益
+Konten eksklusif	Exclusive content	专属内容
+Analisis AI lanjutan	Advanced AI analysis	高级人工智能分析
+Ruang komunitas khusus	Private community spaces	专属社区空间
+Watch Party tambahan	Additional Watch Party features	更多一起看球功能
+Konsep, belum tersedia	Concept, not available	概念，暂不可用
+Belum ada harga, penagihan, atau pembelian langganan.	No pricing, billing or subscription purchases yet.	目前没有定价、计费或订阅购买。
+Akun ORBISS	ORBISS account	ORBISS 账户
+Uji terbatas. Verifikasi email dan pemulihan password belum tersedia. Jangan gunakan password dari layanan lain.	Limited testing. Email verification and password recovery are unavailable. Do not reuse passwords from other services.	仅限测试，尚不支持邮箱验证和密码找回。请勿使用其他服务的密码。
+Memeriksa sesi…	Checking session…	正在检查会话…
+Email belum diverifikasi. Akun ini untuk pengujian terbatas.	Email is unverified. This account is for limited testing.	邮箱尚未验证，此账户仅用于小范围测试。
+Sesi akun sudah ditutup.	Signed out.	已退出登录。
+Nama tampilan	Display name	显示名称
+Nama panggilanmu	Your nickname	你的昵称
+Email	Email	电子邮箱
+Password 12–128 karakter	Password, 12–128 characters	密码，12–128 个字符
+Daftar akun uji	Create test account	创建测试账户
+Memproses akun di server…	Processing account on the server…	正在服务器上处理账户…
+Akun uji berhasil dibuat dan sesi masuk aktif. Email belum diverifikasi.	Test account created and signed in. Email is unverified.	测试账户创建成功并已登录，邮箱尚未验证。
+Berhasil masuk ke akun uji.	Signed in to the test account.	已登录测试账户。
+Memuat pemeriksaan keamanan…	Loading security check…	正在加载安全检查…
+Turnstile gagal. Tutup panel dan coba lagi.	Turnstile failed. Close this panel and try again.	Turnstile 失败，请关闭此面板后重试。
+Turnstile gagal dimuat.	Turnstile failed to load.	无法加载 Turnstile。
+Cari di ORBISS	Search ORBISS	搜索 ORBISS
+Cari halaman ORBISS	Search ORBISS pages	搜索 ORBISS 页面
+Pencarian menu dan fitur prototipe. Bukan pencarian berita atau pertandingan online.	Search prototype menus and features, not online news or matches.	搜索原型菜单和功能，并非搜索在线新闻或比赛。
+Cari Live, Community, klub…	Search Live, Community, clubs…	搜索直播、社区、球队…
+Kata kunci halaman	Page keyword	页面关键词
+Tidak ada halaman yang cocok.	No matching pages.	没有匹配的页面。
+Jelajahi ORBISS	Explore ORBISS	探索 ORBISS
+Navigasi utama	Main navigation	主导航
+Navigasi cepat	Quick navigation	快捷导航
+WORLD SOCCER TIME • Pilot terbatas. Akun dan Community terhubung ke database.	WORLD SOCCER TIME • Limited pilot. Accounts and Community are connected to the database.	WORLD SOCCER TIME • 小范围试用。账户及社区已连接数据库。
+Pilot terbatas • WORLD SOCCER TIME	Limited pilot • WORLD SOCCER TIME	小范围试用 • WORLD SOCCER TIME
+Akun, Community, moderasi, My Club, serta pengelolaan News dan sumber video menggunakan backend dan database.	Accounts, Community, moderation, My Club, News management and video sources use a backend and database.	账户、社区、内容审核、我的球队、新闻及视频源管理使用后端和数据库。
+News dikelola moderator, bukan feed berita otomatis. Pemutaran video tertanam belum terverifikasi.	News is moderator-managed, not an automatic feed. Demo playback has been tested on one device; other videos may have restrictions.	新闻由审核员管理，并非自动新闻源。演示视频已在一台设备上测试播放，其他视频可能受限。
+Verifikasi email dan pemulihan kata sandi belum tersedia. AI, Premium, pembayaran, dan kemitraan masih konsep.	Email verification and password recovery are unavailable. AI, Premium, payments and partnerships remain concepts.	尚不支持邮箱验证及密码找回。人工智能、高级会员、支付及合作伙伴功能仍为概念。
+Akses moderator diperlukan.	Moderator access required.	需要审核员权限。
+Akun tidak ditemukan.	Account not found.	未找到账户。
+Artikel baru harus berupa draf atau terbit.	New articles must be drafts or published.	新文章必须为草稿或已发布状态。
+Artikel berubah atau tidak ditemukan. Muat ulang daftar sebelum mengedit lagi.	Article changed or not found. Reload the list before editing again.	文章已更改或不存在，请重新加载列表后再编辑。
+Artikel tidak tersedia.	Article unavailable.	文章不可用。
+Batas uji tercapai. Tunggu sekitar satu menit sebelum mencoba lagi.	Test limit reached. Wait about one minute before retrying.	已达到测试限制，请等待约一分钟后重试。
+Database belum terhubung.	Database not connected.	数据库尚未连接。
+Database belum tersedia.	Database unavailable.	数据库暂不可用。
+Detail maksimal 500 karakter.	Details must not exceed 500 characters.	说明不得超过 500 个字符。
+Email atau password tidak cocok.	Email or password does not match.	邮箱或密码不匹配。
+Endpoint akun tidak tersedia.	Account endpoint unavailable.	账户接口不可用。
+Endpoint atau metode tidak tersedia.	Endpoint or method unavailable.	接口或方法不可用。
+Endpoint tidak tersedia.	Endpoint unavailable.	接口不可用。
+Hanya moderator yang boleh mengelola artikel.	Only moderators may manage articles.	只有审核员可以管理文章。
+Hanya moderator yang boleh mengganti video.	Only moderators may change videos.	只有审核员可以更改视频。
+Identitas jaringan tidak tersedia.	Network identity unavailable.	网络标识不可用。
+Isi email valid dan password 12–128 karakter.	Enter a valid email and a password of 12–128 characters.	请输入有效邮箱及 12–128 个字符的密码。
+Judul 1–150, ringkasan 1–500, dan isi 1–3.000 karakter diperlukan.	Title must be 1–150, summary 1–500 and body 1–3,000 characters.	标题须为 1–150、摘要 1–500、正文 1–3,000 个字符。
+Judul harus 1–120 karakter tanpa karakter kontrol.	Title must be 1–120 characters with no control characters.	标题须为 1–120 个字符，且不含控制字符。
+Kategori atau status tidak valid.	Invalid category or status.	分类或状态无效。
+Komentar harus 1–500 karakter.	Comments must be 1–500 characters.	评论须为 1–500 个字符。
+Konfigurasi video belum dapat dibaca atau disimpan. Periksa tabel live_video dan log Worker.	Unable to read or save video settings. Check the live_video table and Worker logs.	无法读取或保存视频配置，请检查 live_video 表及 Worker 日志。
+Konten tidak ditemukan atau sudah dipulihkan. Muat ulang daftar.	Content not found or already restored. Reload the list.	内容不存在或已恢复，请重新加载列表。
+Konten tidak tersedia.	Content unavailable.	内容不可用。
+Konten tidak valid.	Invalid content.	内容无效。
+Laporan sudah ditinjau atau tidak ditemukan.	Report already reviewed or not found.	举报已审核或不存在。
+Laporan sudah ditinjau. Muat ulang.	Report already reviewed. Reload.	举报已审核，请重新加载。
+Laporan tidak valid.	Invalid report.	举报无效。
+Masuk ke akun terlebih dahulu.	Sign in first.	请先登录账户。
+Masuk ke akun untuk menyimpan klub favorit.	Sign in to save your favorite club.	请登录以保存喜爱球队。
+Masuk terlebih dahulu.	Sign in first.	请先登录。
+Masukkan tautan HTTPS video YouTube yang valid, bukan kanal atau playlist.	Enter a valid HTTPS YouTube video link, not a channel or playlist.	请输入有效的 HTTPS YouTube 视频链接，而非频道或播放列表。
+Metode tidak diizinkan.	Method not allowed.	不允许使用此方法。
+Moderasi belum tersedia atau permintaan gagal. Periksa tabel moderasi dan log Worker.	Moderation is unavailable or the request failed. Check moderation tables and Worker logs.	审核暂不可用或请求失败，请检查审核表及 Worker 日志。
+Nama klub harus 2–80 karakter tanpa karakter kontrol.	Club name must be 2–80 characters with no control characters.	球队名称须为 2–80 个字符，且不含控制字符。
+Nama klub tidak valid.	Invalid club name.	球队名称无效。
+Nama tampilan harus 2–60 karakter.	Display name must be 2–60 characters.	显示名称须为 2–60 个字符。
+News belum tersedia atau gagal disimpan. Periksa tabel news_articles dan log Worker.	News unavailable or failed to save. Check the news_articles table and Worker logs.	新闻暂不可用或保存失败，请检查 news_articles 表及 Worker 日志。
+Origin tidak diizinkan.	Origin not allowed.	不允许此请求来源。
+Pembatasan permintaan belum tersedia.	Request limiting unavailable.	请求限流暂不可用。
+Pendaftaran tidak dapat diselesaikan. Coba masuk bila sudah memiliki akun.	Registration could not be completed. Try signing in if you already have an account.	无法完成注册。如果已有账户，请尝试登录。
+Perlindungan akun belum dikonfigurasi. Periksa secret dan rate limiter.	Account protection is not configured. Check the secret and rate limiter.	尚未配置账户保护，请检查密钥及限流器。
+Permintaan akun gagal. Jangan ulang cepat; periksa log Worker tanpa membagikan password atau token.	Account request failed. Do not retry rapidly; check Worker logs without sharing passwords or tokens.	账户请求失败，请勿频繁重试。检查 Worker 日志时请勿分享密码或令牌。
+Permintaan Community gagal. Tidak ada keberhasilan yang dapat dikonfirmasi.	Community request failed. Success cannot be confirmed.	社区请求失败，无法确认操作成功。
+Pilihan klub belum dapat disimpan atau dibaca. Coba lagi setelah memeriksa koneksi.	Unable to save or read club preference. Check your connection and retry.	暂时无法保存或读取球队偏好，请检查网络后重试。
+Postingan harus 1–1.000 karakter.	Posts must be 1–1,000 characters.	帖子须为 1–1,000 个字符。
+Postingan tidak tersedia.	Post unavailable.	帖子不可用。
+Sesi keamanan berubah. Muat ulang halaman.	Security session changed. Reload the page.	安全会话已更改，请重新加载页面。
+Sesi keamanan berubah. Muat ulang.	Security session changed. Reload.	安全会话已更改，请重新加载。
+Sesi keamanan tidak valid. Muat ulang.	Invalid security session. Reload.	安全会话无效，请重新加载。
+Status suka tidak valid.	Invalid like status.	点赞状态无效。
+Sumber harus tautan HTTPS yang valid.	Source must be a valid HTTPS link.	来源必须是有效的 HTTPS 链接。
+Tautan sumber terlalu panjang.	Source link is too long.	来源链接过长。
+Terlalu banyak percobaan. Tunggu sekitar satu menit.	Too many attempts. Wait about one minute.	尝试次数过多，请等待约一分钟。
+Terlalu banyak permintaan. Tunggu sekitar satu menit.	Too many requests. Wait about one minute.	请求过多，请等待约一分钟。
+Terlalu banyak perubahan. Tunggu sekitar satu menit.	Too many changes. Wait about one minute.	更改过于频繁，请等待约一分钟。
+Tindakan tidak valid.	Invalid action.	操作无效。
+Tunggu sekitar satu menit sebelum mencoba lagi.	Wait about one minute before retrying.	请等待约一分钟后重试。
+Turnstile ditolak atau kedaluwarsa. Coba tantangan baru.	Turnstile rejected or expired. Try a new challenge.	Turnstile 验证被拒绝或已过期，请尝试新的验证。
+Versi artikel tidak valid. Muat ulang daftar.	Invalid article version. Reload the list.	文章版本无效，请重新加载列表。
+Video demo belum dikonfigurasi.	Demo video not configured.	尚未配置演示视频。
+Akun uji terbatas. Email belum diverifikasi.	Limited test account. Email is unverified.	受限测试账户，邮箱尚未验证。
+Laporan tercatat atau sudah pernah dikirim. Konten belum otomatis disembunyikan.	Report recorded or previously submitted. Content is not automatically hidden.	举报已记录或已提交过，内容不会自动隐藏。
+Sumber demo tersimpan. Izin penyematan dan pemutaran tetap perlu diuji.	Demo source saved. Embedding permission and playback still need testing.	演示视频源已保存，仍需测试嵌入许可及播放。
+Masuk ke akun melalui tombol Buat akun terlebih dahulu.	Sign in using the Create account button first.	请先通过创建账户按钮登录。
+Permintaan gagal.	Request failed.	请求失败。
+Permintaan akun gagal.	Account request failed.	账户请求失败。
+Format feed tidak sesuai.	Invalid feed format.	动态格式无效。
+Format artikel tidak valid.	Invalid article format.	文章格式无效。
+Respons konfigurasi video tidak valid.	Invalid video configuration response.	视频配置响应无效。
+Tidak dapat terhubung ke server.	Unable to connect to the server.	无法连接服务器。
+Failed to fetch	Unable to connect. Check your network and try again.	无法连接，请检查网络后重试。
+The operation was aborted due to timeout	Request timed out. Try again.	请求超时，请重试。
+The user aborted a request.	Request cancelled.	请求已取消。
+Penyimpanan browser tidak tersedia. Perubahan hanya berlaku selama halaman ini terbuka.	Browser storage is unavailable. Changes apply only while this page is open.	浏览器存储不可用，更改仅在此页面打开期间有效。
+Belum ada pertandingan atau skor terhubung.	No match or score source is connected.	尚未接入比赛或比分源。
+ORBISS LIVE • PRATINJAU ANTARMUKA	ORBISS LIVE • INTERFACE PREVIEW	ORBISS 直播 • 界面预览
+RUANG IKLAN • DEMO	AD SPACE • DEMO	广告位 • 演示
+Penempatan sponsor di bawah player, tanpa menutupi siaran.	Sponsor placement below the player, without covering the video.	赞助展示位位于播放器下方，不遮挡视频。
+Belum ada pertandingan atau skor terhubung.	No match or score data is connected.	尚未接入比赛或比分数据。
+VIDEO DEMO • BUKAN KLAIM SIARAN RESMI	DEMO VIDEO • NOT AN OFFICIAL BROADCAST	演示视频 • 非官方直播
+Tonton demo di ORBISS	Watch demo on ORBISS	在 ORBISS 观看演示
+Tekan tombol untuk memuat pemutar YouTube. Saat dimuat, browser akan terhubung ke layanan YouTube.	Tap to load the YouTube player. Your browser will connect to YouTube.	点击加载 YouTube 播放器，浏览器将连接 YouTube 服务。
+Video demo YouTube pada ORBISS	YouTube demo video on ORBISS	ORBISS 上的 YouTube 演示视频
+Periksa koneksi dan coba lagi.	Check your connection and try again.	请检查网络连接后重试。
+ORBISS AI	ORBISS AI	ORBISS 人工智能
+ORBISS Live	ORBISS Live	ORBISS 直播
+ORBISS Premium	ORBISS Premium	ORBISS 高级会员
+ORBISS Video	ORBISS Video	ORBISS 视频
+ORBISS • Community + Live Prototype	ORBISS • Community + Live Prototype	ORBISS • 社区与直播原型
+Sepak bola lebih seru ketika dibicarakan bersama.	Football is better when we talk about it together.	一起讨论，足球更精彩。
+Apa yang ingin kamu bahas?	What would you like to discuss?	你想讨论什么？
+Demo satu perangkat. Tidak terkirim ke pengguna lain. Maksimal 1.000 karakter.	Single-device demo. Not sent to other users. Up to 1,000 characters.	单设备演示，不会发送给其他用户。最多 1,000 个字符。
+Feed penggemar	Fan feed	球迷动态
+Kembali ke Live Center	Back to Live Center	返回直播中心
+Berita sepak bola	Football news	足球新闻
+Tempat berita dan transfer. Belum ada feed atau artikel terhubung.	News and transfer space. No feed or articles connected yet.	新闻及转会区域，尚未接入动态或文章。
+Belum ada berita terhubung.	No news source connected.	尚未接入新闻源。
+Pratinjau kategori	Category preview	分类预览
+Feed berita belum terhubung	Automatic news feed not connected	自动新闻源尚未接入
+Pilihan tersimpan lokal	Club preference saved to account	球队偏好保存在账户中
+Data klub belum terhubung	Club data not connected	球队数据尚未接入
+Player lokal tersedia	Local player available	本地播放器可用
+Siaran langsung belum terhubung	Live broadcast not connected	尚未接入实时直播
+Posting, suka, komentar lokal	Posts, likes and comments stored in database	帖子、点赞及评论保存在数据库中
+Multi-pengguna belum terhubung	Account-based Community available	已提供账户社区功能
+SUMBER SIARAN BELUM TERHUBUNG	BROADCAST SOURCE NOT CONNECTED	直播源尚未接入
+Tidak ada video atau pertandingan langsung yang diputar.	No live video or match is being played.	未播放实时视频或比赛。
+Pilihan lokal, bukan akun anggota klub.	Fan preference, not an official club account.	球迷偏好，非官方球队会员账户。
+Masukkan nama klub	Enter club name	输入球队名称
+Simpan di perangkat ini	Save on this device	保存在此设备
+Masukkan nama klub terlebih dahulu.	Enter a club name first.	请先输入球队名称。
+Klub favorit tersimpan di browser ini.	Favorite club saved in this browser.	喜爱球队已保存在此浏览器。
+Pilihan klub lokal sudah tersedia. Jadwal, berita klub, dan komunitas klub menunggu koneksi data.	Club preference is available. Club schedules, news and community await data integration.	已提供球队偏好，球队赛程、新闻及球队社区仍待接入数据。
+Klub favorit	Favorite club	喜爱球队
+Belum ada postingan lokal. Mulai percakapan pertama.	No local posts yet. Start the first conversation.	暂无本地帖子，发起第一场讨论吧。
+Belum ada postingan. Pilih topik atau tulis pendapat pertamamu.	No posts yet. Choose a topic or share your first thought.	暂无帖子，选择话题或分享你的第一个想法。
+Cari postingan lokal	Search local posts	搜索本地帖子
+Tulis komentar lokal	Write a local comment	填写本地评论
+Tulis pendapatmu terlebih dahulu.	Write your thoughts first.	请先填写你的想法。
+Kirim ke feed lokal	Send to local feed	发送至本地动态
+Postingan tersimpan di browser ini, bukan dipublikasikan online.	Post saved in this browser, not published online.	帖子已保存在此浏览器，并未发布到线上。
+Postingan ditambahkan ke feed lokal. Tidak dipublikasikan online.	Post added to local feed, not published online.	帖子已加入本地动态，并未发布到线上。
+Komentar disimpan lokal, tidak dikirim online.	Comment saved locally, not sent online.	评论已本地保存，并未发送至线上。
+Disukai olehmu	Liked by you	你已点赞
+Kamu • komentar lokal	You • local comment	你 • 本地评论
+Kamu • lokal	You • local	你 • 本地
+Unduh cadangan Community lokal	Download local Community backup	下载本地社区备份
+Mulai obrolan: taktik pertandingan, klub favorit, atau pengalaman mendukung tim.	Start a conversation: tactics, favorite clubs or supporting your team.	发起讨论：比赛战术、喜爱球队或支持球队的经历。
+PEMANTIK DISKUSI • BUKAN POSTING PENGGUNA	DISCUSSION PROMPT • NOT A USER POST	讨论提示 • 非用户帖子
+Taktik pertandingan	Match tactics	比赛战术
+Cerita matchday	Matchday stories	比赛日故事
+Postingan, suka, dan komentar di bawah hanya milik sesi/perangkat ini. Tidak ada pengguna lain yang terhubung.	The posts, likes and comments below belong only to this session/device. No other users are connected.	下方的帖子、点赞及评论仅属于此会话或设备，未连接其他用户。
+Tidak ada postingan yang cocok.	No matching posts.	没有匹配的帖子。
+Buat akun ORBISS	Create ORBISS account	创建 ORBISS 账户
+Nama yang ditampilkan ke komunitas	Name shown to the community	向社区显示的名称
+Isi nama minimal dua karakter.	Enter a name with at least two characters.	名称请至少输入两个字符。
+Isi nama tampilan terlebih dahulu.	Enter a display name first.	请先输入显示名称。
+Pratinjau data	Preview data	预览资料
+Lihat pratinjau pendaftaran	Preview registration	预览注册
+Belum ada akun dibuat. Tidak ada email dikirim.	No account created. No email sent.	未创建账户，也未发送邮件。
+Email untuk pratinjau	Email for preview	预览用邮箱
+Email hanya dipakai untuk pratinjau ini, tidak disimpan ke penyimpanan browser. Kata sandi dan verifikasi akan ditambahkan setelah layanan akun tersedia.	Email is used only for this preview and is not stored in browser storage. Passwords and verification await the account service.	邮箱仅用于此预览，不保存在浏览器存储中。密码及验证功能待账户服务接入。
+DEMO PENDAFTARAN • Data tidak dikirim ke server. Akun belum dapat dibuat dan email tidak akan menerima verifikasi. Jangan gunakan kata sandi asli.	REGISTRATION DEMO • Data is not sent to the server. Accounts cannot be created and no verification email is sent. Do not use a real password.	注册演示 • 数据不会发送到服务器，无法创建账户，也不会发送验证邮件。请勿使用真实密码。
+Gunakan nama di prototipe ini	Use this name in the prototype	在原型中使用此名称
+Nama tampilan disimpan di browser ini. Ini bukan pendaftaran akun.	Display name saved in this browser. This is not account registration.	显示名称已保存在此浏览器，这并非账户注册。
+Nama digunakan pada sesi ini. Penyimpanan browser tidak tersedia.	Name used for this session. Browser storage unavailable.	名称仅用于当前会话，浏览器存储不可用。
+Nama disimpan di browser ini.	Name saved in this browser.	名称已保存在此浏览器。
+Simpan nama sementara	Save temporary name	保存临时名称
+Penyimpanan tidak tersedia. Nama hanya digunakan selama sesi ini.	Storage unavailable. Name used only for this session.	存储不可用，名称仅用于当前会话。
+Pendaftaran akun online belum terhubung. Kamu hanya bisa menyimpan nama tampilan di browser ini, bukan membuat akun ORBISS.	Online registration is not connected in this preview. You can only save a display name in this browser, not create an ORBISS account.	此预览尚未接入在线注册，只能将显示名称保存在浏览器中，无法创建 ORBISS 账户。
+Ubah klub favorit	Change favorite club	更改喜爱球队
+Vue d’ensemble	Overview	概览
+VUE D’ENSEMBLE	OVERVIEW	概览
+LECTEUR LOCAL	LOCAL PLAYER	本地播放器
+SOURCE LIVE NON CONNECTÉE	LIVE SOURCE NOT CONNECTED	直播源尚未接入
+Rechercher dans mes publications	Search my posts	搜索我的帖子
+Coba verifikasi lagi	Try verification again	重新验证
+Demo player ORBISS	ORBISS demo player	ORBISS 演示播放器
+Endpoint verifikasi belum tersedia atau verifikasi ditolak.	Verification endpoint unavailable or verification rejected.	验证接口不可用或验证被拒绝。
+HASIL SERVER: Verifikasi berhasil. Belum ada akun dibuat.	SERVER RESULT: Verification succeeded. No account created.	服务器结果：验证成功，尚未创建账户。
+Memvalidasi ke server…	Validating with server…	正在向服务器验证…
+Pemeriksaan browser selesai. Tekan tombol untuk memvalidasi ke server.	Browser check complete. Press the button to verify with the server.	浏览器检查完成，点击按钮向服务器验证。
+Pemeriksaan gagal. Periksa hostname widget dan koneksi internet.	Check failed. Verify widget hostname and internet connection.	检查失败，请核对组件主机名及网络连接。
+Server terverifikasi	Server verified	服务器已验证
+Tahap uji perlindungan formulir. Verifikasi ini belum mendaftarkan akun. Pendaftaran dan login belum aktif.	Form protection test. This verification does not register an account. Registration and login are not active in this preview.	表单保护测试，此验证不会注册账户。此预览中的注册及登录尚未启用。
+Uji verifikasi server	Test server verification	测试服务器验证
+Verifikasi kedaluwarsa. Tunggu tantangan baru.	Verification expired. Wait for a new challenge.	验证已过期，请等待新的验证。
+Video demo ORBISS	ORBISS demo video	ORBISS 演示视频
+Memuat daftar artikel…	Loading article list…	正在加载文章列表…
+Endpoint belum tersedia.	Endpoint not available yet.	接口尚不可用。
+Batas 50 komentar lokal per postingan tercapai.	Limit of 50 local comments per post reached.	已达到每条帖子 50 条本地评论的上限。
+`;
+const dictionary=new Map();
+for(const line of dictionaryText.trim().split('\n')){const [id,en,zh]=line.split('\t');if(id&&en&&zh)dictionary.set(id,{id,en,'zh-CN':zh})}
+const localNames={HOME:'BERANDA',Home:'Beranda',NEWS:'BERITA',News:'Berita',LIVE:'LIVE',Live:'Live',COMMUNITY:'KOMUNITAS',Community:'Komunitas','MY CLUB':'KLUB SAYA','My Club':'Klub Saya',VIDEO:'VIDEO',Video:'Video','WATCH PARTY':'NONTON BARENG','Watch Party':'Nonton Bareng',More:'Lainnya','Football.':'Sepak bola.','Live. AI. Community.':'Live. AI. Komunitas.','FOOTBALL • LIVE • AI • COMMUNITY':'SEPAK BOLA • LIVE • AI • KOMUNITAS','COMMUNITY FIRST':'KOMUNITAS UTAMA','LIVE CENTER':'PUSAT LIVE','Watch. Shop. Support.':'Tonton. Belanja. Dukung.','Gabung Community':'Gabung Komunitas','Buka Community':'Buka Komunitas','Diskusi di Community':'Diskusi di Komunitas','Kelola News':'Kelola Berita','Produk & Partner':'Produk & Mitra','PRODUK & PARTNER':'PRODUK & MITRA','Partner & Aktivitas':'Mitra & Aktivitas','Partner Spotlight':'Sorotan Mitra','PARTNER SPOTLIGHT • DEMO':'SOROTAN MITRA • DEMO','ORBISS Premium':'ORBISS Premium','Live Center':'Pusat Live','AI Analysis':'Analisis AI',PREMIUM:'PREMIUM',Premium:'Premium'};
+for(const [key,value] of Object.entries(localNames)){if(dictionary.has(key))dictionary.get(key).id=value}
+// Correct earlier prototype copy without rewriting account or database contents.
+const corrected={
+'Diskusi pertandingan dan cerita klub. Postingan prototipe hanya tersimpan di browser ini.':'Diskusi pertandingan dan cerita klub. Postingan akun tersimpan di database.',
+'News dikelola moderator, bukan feed berita otomatis. Pemutaran video tertanam belum terverifikasi.':'News dikelola moderator, bukan feed berita otomatis. Video demo sudah diuji di satu perangkat; video lain dapat memiliki pembatasan.'
+};
+for(const [key,value] of Object.entries(corrected)){if(dictionary.has(key))dictionary.get(key).id=value}
+let locale='id';try{const saved=localStorage.getItem('orbiss.interface.language.v1');if(['id','en','zh-CN'].includes(saved))locale=saved}catch(e){}
+window.orbissLocale=locale;
+const textRecords=new WeakMap();const attrRecords=new WeakMap();const missing=new Set();
+const terms={id:{draft:'draf',published:'terbit',archived:'arsip',spam:'spam',abuse:'pelecehan',other:'lainnya'},en:{draft:'draft',published:'published',archived:'archived',spam:'spam',abuse:'abuse',other:'other'},'zh-CN':{draft:'草稿',published:'已发布',archived:'已存档',spam:'垃圾信息',abuse:'骚扰',other:'其他'}};
+function pick(id,en,zh){return locale==='en'?en:locale==='zh-CN'?zh:id}
+function translate(raw){
+const key=raw.trim();if(!key)return raw;
+let translated;const exact=dictionary.get(key);
+if(exact)translated=exact[locale];
+else{
+let m;
+if((m=key.match(/^(Suka|Disukai|Komentar) · (\d+)$/)))translated=({Suka:pick('Suka','Like','点赞'),Disukai:pick('Disukai','Liked','已点赞'),Komentar:pick('Komentar','Comments','评论')}[m[1]])+' · '+m[2];
+else if((m=key.match(/^(\d+) \/ 1\.000 karakter$/)))translated=pick(m[1]+' / 1.000 karakter',m[1]+' / 1,000 characters',m[1]+' / 1,000 个字符');
+else if((m=key.match(/^(\d+) artikel ditampilkan dari maksimal 20 artikel terbit terbaru\.$/)))translated=pick(key,m[1]+' articles shown, from up to 20 latest published articles.','显示 '+m[1]+' 篇文章，最多加载最新 20 篇已发布文章。');
+else if((m=key.match(/^Status: (draft|published|archived) • versi (\d+)$/)))translated=pick('Status: '+terms.id[m[1]]+' • versi '+m[2],'Status: '+terms.en[m[1]]+' • version '+m[2],'状态：'+terms['zh-CN'][m[1]]+' • 版本 '+m[2]);
+else if((m=key.match(/^(.*) \[(draft|published|archived)\]$/)))translated=m[1]+' ['+terms[locale][m[2]]+']';
+else if((m=key.match(/^(.*) — demo YouTube$/)))translated=m[1]+pick(' — demo YouTube',' — YouTube demo',' — YouTube 演示');
+else if((m=key.match(/^Halo, (.*)$/)))translated=pick('Halo, ','Hello, ','你好，')+m[1];
+else if((m=key.match(/^Masuk sebagai (.*)$/)))translated=pick('Masuk sebagai ','Signed in as ','当前登录：')+m[1];
+else if((m=key.match(/^Penulis: (.*)$/)))translated=pick('Penulis: ','Author: ','作者：')+m[1];
+else if((m=key.match(/^Alasan: (.*)$/)))translated=pick('Alasan: ','Reason: ','原因：')+(terms[locale][m[1]]||m[1]);
+else if((m=key.match(/^File lokal: (.*)$/)))translated=pick('File lokal: ','Local file: ','本地文件：')+m[1];
+else if((m=key.match(/^Komentar untuk postingan (.*)$/)))translated=pick('Komentar untuk postingan ','Comment on post by ','评论帖子，作者：')+m[1];
+else if((m=key.match(/^Pilihan dibaca dari database akun pada (.*)\.$/)))translated=pick('Pilihan dibaca dari database akun pada ','Preference read from the account database at ','已从账户数据库读取偏好，时间：')+m[1]+'.';
+else if((m=key.match(/^Sumber demo dari D1\. Terakhir disimpan (.*)\. Status pemutaran belum diverifikasi\.$/)))translated=pick('Sumber demo dari D1. Terakhir disimpan ','Demo source from D1. Last saved ','演示视频源来自 D1。最后保存于 ')+m[1]+pick('. Status pemutaran perlu diperiksa untuk setiap video.','. Playback must be checked for each video.','。每个视频的播放情况均需单独检查。');
+else if((m=key.match(/^Tidak bisa memeriksa sesi: (.*)$/)))translated=pick('Tidak bisa memeriksa sesi: ','Unable to check session: ','无法检查会话：')+translate(m[1]);
+else if((m=key.match(/^Pertanyaan demo: “(.*)”\. Belum dikirim ke layanan AI\. Tidak ada analisis nyata yang dibuat\.$/)))translated=pick('Pertanyaan demo: “','Demo question: “','演示问题：“')+m[1]+pick('”. Belum dikirim ke layanan AI. Tidak ada analisis nyata yang dibuat.','”. Not sent to an AI service. No real analysis was generated.','”。尚未发送至人工智能服务，未生成实际分析。');
+else if((m=key.match(/^(.*): belum tersambung ke layanan ruang\. Kamu belum bergabung ke ruang online\.$/)))translated=m[1]+pick(': belum tersambung ke layanan ruang. Kamu belum bergabung ke ruang online.',': not connected to the room service. You have not joined an online room.','：尚未连接房间服务，你尚未加入在线房间。');
+else if(key==='WORLD SOCCER TIME'||key==='ORBISS'||key==='ORBISS — PT Orbiss Technology Indonesia'||/^[\d\s:.,/–—•·()%-]+$/.test(key)||/^https:\/\//.test(key))return raw;
+else if(key.includes(' • ')){const parts=key.split(' • ');translated=parts.map(part=>translate(part)).join(' • ')}
+else {if(locale!=='id'&&/[A-Za-z]{3}/.test(key))missing.add(key);return raw}
+}
+return raw.slice(0,raw.indexOf(key))+translated+raw.slice(raw.indexOf(key)+key.length);
+}
+const ignored='script,style,template,noscript,code,pre,.brand-crop,[data-no-i18n],.orbiss-language';
+function ignore(element){return !element||!!element.closest(ignored)}
+function updateText(node){if(ignore(node.parentElement))return;let record=textRecords.get(node);if(!record||node.nodeValue!==record.rendered){record={source:node.nodeValue,rendered:node.nodeValue};textRecords.set(node,record)}const result=translate(record.source);if(node.nodeValue!==result)node.nodeValue=result;record.rendered=result}
+function updateAttrs(el){if(ignore(el))return;let records=attrRecords.get(el);if(!records){records={};attrRecords.set(el,records)}for(const name of ['placeholder','aria-label','title','alt']){if(!el.hasAttribute(name))continue;const value=el.getAttribute(name);let record=records[name];if(!record||value!==record.rendered){record={source:value,rendered:value};records[name]=record}const result=translate(record.source);if(value!==result)el.setAttribute(name,result);record.rendered=result}}
+let queued=false;let observer;
+function render(){queued=false;observer.disconnect();document.documentElement.lang=locale;document.title=pick('ORBISS • Komunitas Sepak Bola','ORBISS • Football Community','ORBISS • 足球社区');window.orbissLocale=locale;const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);let n;while((n=walker.nextNode()))updateText(n);for(const el of document.querySelectorAll('[placeholder],[aria-label],[title],[alt]'))updateAttrs(el);observer.observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['placeholder','aria-label','title','alt']})}
+function schedule(){if(!queued){queued=true;requestAnimationFrame(render)}}
+observer=new MutationObserver(schedule);
+const language=document.createElement('div');language.className='orbiss-language';const label=document.createElement('label');label.htmlFor='orbissLanguage';const select=document.createElement('select');select.id='orbissLanguage';select.setAttribute('aria-label','Bahasa / Language / 语言');for(const [value,name] of [['id','Bahasa Indonesia'],['en','English'],['zh-CN','简体中文']]){const option=document.createElement('option');option.value=value;option.textContent=name;option.lang=value;select.append(option)}select.value=locale;language.append(label,select);document.querySelector('.header-controls').append(language);
+function labelLanguage(){label.textContent=pick('Bahasa','Language','语言')}
+select.onchange=()=>{locale=select.value;missing.clear();try{localStorage.setItem('orbiss.interface.language.v1',locale)}catch(e){}labelLanguage();render();for(const field of document.querySelectorAll('input,textarea,select'))field.setCustomValidity('')};
+labelLanguage();
+// Localize native form validation without changing submitted input values.
+document.addEventListener('invalid',event=>{const field=event.target;if(!field.validity||field===select)return;const v=field.validity;let message='';if(v.valueMissing)message=pick('Isi kolom ini.','Please fill out this field.','请填写此项。');else if(v.typeMismatch)message=field.type==='email'?pick('Masukkan alamat email yang valid.','Enter a valid email address.','请输入有效的邮箱地址。'):pick('Masukkan tautan yang valid.','Enter a valid URL.','请输入有效的链接。');else if(v.tooShort)message=pick('Isi minimal '+field.minLength+' karakter.','Enter at least '+field.minLength+' characters.','请至少输入 '+field.minLength+' 个字符。');else if(v.tooLong)message=pick('Isi maksimal '+field.maxLength+' karakter.','Enter no more than '+field.maxLength+' characters.','最多输入 '+field.maxLength+' 个字符。');else if(v.patternMismatch)message=pick('Periksa format kolom ini.','Check this field’s format.','请检查此项格式。');if(message)field.setCustomValidity(message)},true);
+document.addEventListener('input',event=>{if(event.target.setCustomValidity)event.target.setCustomValidity('')},true);
+window.orbissI18n={get language(){return locale},translate,audit:()=>Array.from(missing).sort(),rescan:render};
+render();
+})();
+</script>
+<script>
+// Search matches translated labels while keeping stable route identifiers.
+searchButton.onclick=()=>{
+openUtility('Cari di ORBISS');utilityContent.append(element('p','Pencarian menu dan fitur prototipe. Bukan pencarian berita atau pertandingan online.','profile-note'));
+const input=document.createElement('input');input.type='search';input.placeholder='Cari Live, Community, klub…';input.setAttribute('aria-label','Kata kunci halaman');const results=element('div');results.setAttribute('aria-live','polite');
+const index=[...pages,['store','PRODUK & PARTNER']].map(([id,label])=>({id,label,description:featureStates[id].join(' • ')}));
+const draw=()=>{results.replaceChildren();const term=input.value.trim().toLocaleLowerCase(window.orbissLocale||'id');const t=window.orbissI18n.translate;const matches=index.filter(item=>[item.label,item.description,t(item.label),t(item.description),item.id==='my-club'?'klub club 球队':''].join(' ').toLocaleLowerCase(window.orbissLocale||'id').includes(term));if(!matches.length)results.append(element('p','Tidak ada halaman yang cocok.'));for(const item of matches){const button=element('button',item.label,'search-result');button.type='button';button.append(element('small',item.description));button.onclick=()=>{utility.close();showSection(item.id)};results.append(button)}};
+input.oninput=draw;utilityContent.append(input,results);draw();window.orbissI18n.rescan();input.focus();
+};
+</script>
+</body></html>
