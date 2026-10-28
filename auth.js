@@ -216,3 +216,39 @@ export async function handleLiveVideo(request,env){
   return result({ok:true,videoId:id,title,mode:'demo',playability:'not_verified',message:'Sumber demo tersimpan. Izin penyematan dan pemutaran tetap perlu diuji.'});
  }catch(error){console.error('ORBISS live video config failed',error instanceof Error?error.message:'Unknown database error');return result({error:'Konfigurasi video belum dapat dibaca atau disimpan. Periksa tabel live_video dan log Worker.'},503)}
 }
+
+export async function handleNews(request,env){
+ try{
+  if(!env.DB)return result({error:'Database belum tersedia.'},503);
+  const url=new URL(request.url);const path=url.pathname;
+  if(path==='/api/news'&&request.method==='GET'){
+   const {results}=await env.DB.prepare("SELECT id,title,summary,category,source_url AS sourceUrl,published_at AS publishedAt FROM news_articles WHERE status='published' ORDER BY published_at DESC,id DESC LIMIT 20").all();return result({items:results,limit:20,scope:'latest_published_articles'});
+  }
+  const match=path.match(/^\/api\/news\/([a-zA-Z0-9_-]{1,100})$/);
+  if(match&&match[1]!=='manage'&&request.method==='GET'){
+   const article=await env.DB.prepare("SELECT id,title,summary,body,category,source_url AS sourceUrl,published_at AS publishedAt FROM news_articles WHERE id=? AND status='published'").bind(match[1]).first();return article?result({article}):result({error:'Artikel tidak tersedia.'},404);
+  }
+  const session=await getSession(request,env);if(!session)return result({error:'Masuk terlebih dahulu.'},401);
+  const moderator=await env.DB.prepare('SELECT user_id FROM moderators WHERE user_id=?').bind(session.row.id).first();if(!moderator)return result({error:'Hanya moderator yang boleh mengelola artikel.'},403);
+  if(path==='/api/news/manage'&&request.method==='GET'){
+   const {results}=await env.DB.prepare('SELECT id,title,summary,body,category,source_url AS sourceUrl,status,version,updated_at AS updatedAt FROM news_articles ORDER BY updated_at DESC,id DESC LIMIT 50').all();return result({items:results,limit:50});
+  }
+  if(!((path==='/api/news'&&request.method==='POST')||(match&&match[1]!=='manage'&&request.method==='PUT')))return result({error:'Endpoint atau metode tidak tersedia.'},405);
+  if(request.headers.get('Origin')!==url.origin)return result({error:'Origin tidak diizinkan.'},403);
+  if(!equal(await hash(request.headers.get('X-CSRF-Token')||''),session.row.csrf_token_hash))return result({error:'Sesi keamanan berubah. Muat ulang.'},403);
+  if(!env.AUTH_RATE_LIMITER)return result({error:'Pembatasan permintaan belum tersedia.'},503);
+  const allowed=await env.AUTH_RATE_LIMITER.limit({key:'orbiss-news:'+session.row.id});if(!allowed.success)return result({error:'Terlalu banyak perubahan. Tunggu sekitar satu menit.'},429);
+  // Same bounded body reader as accounts; initial UI limits body to 3,000 chars to fit request ceiling.
+  const body=await readBody(request);const title=typeof body.title==='string'?body.title.trim():'';const summary=typeof body.summary==='string'?body.summary.trim():'';const content=typeof body.body==='string'?body.body.trim():'';
+  if(!title||title.length>150||!summary||summary.length>500||!content||content.length>3000)return result({error:'Judul 1–150, ringkasan 1–500, dan isi 1–3.000 karakter diperlukan.'},400);
+  if(!['match','transfer','club','general'].includes(body.category)||!['draft','published','archived'].includes(body.status))return result({error:'Kategori atau status tidak valid.'},400);
+  let source=null;if(body.sourceUrl){if(typeof body.sourceUrl!=='string'||body.sourceUrl.length>1000)return result({error:'Tautan sumber terlalu panjang.'},400);try{const parsed=new URL(body.sourceUrl.trim());if(parsed.protocol!=='https:'||parsed.username||parsed.password)throw new Error();source=parsed.href}catch{return result({error:'Sumber harus tautan HTTPS yang valid.'},400)}}
+  if(request.method==='POST'){
+   if(body.status==='archived')return result({error:'Artikel baru harus berupa draf atau terbit.'},400);
+   const id=crypto.randomUUID();await env.DB.prepare('INSERT INTO news_articles(id,title,summary,body,category,source_url,status,author_id,updated_by,published_at) VALUES (?,?,?,?,?,?,?,?,?,?)').bind(id,title,summary,content,body.category,source,body.status,session.row.id,session.row.id,body.status==='published'?Math.floor(Date.now()/1000):null).run();return result({ok:true,id,version:1,status:body.status},201);
+  }
+  if(!Number.isInteger(body.version)||body.version<1)return result({error:'Versi artikel tidak valid. Muat ulang daftar.'},400);
+  const updated=await env.DB.prepare(`UPDATE news_articles SET title=?,summary=?,body=?,category=?,source_url=?,status=?,updated_by=?,updated_at=unixepoch(),version=version+1,published_at=CASE WHEN ?='published' THEN COALESCE(published_at,unixepoch()) ELSE published_at END WHERE id=? AND version=?`).bind(title,summary,content,body.category,source,body.status,session.row.id,body.status,match[1],body.version).run();if(updated.meta.changes!==1)return result({error:'Artikel berubah atau tidak ditemukan. Muat ulang daftar sebelum mengedit lagi.'},409);
+  return result({ok:true,id:match[1],version:body.version+1,status:body.status});
+ }catch(error){console.error('ORBISS News operation failed',error instanceof Error?error.message:'Unknown database error');return result({error:'News belum tersedia atau gagal disimpan. Periksa tabel news_articles dan log Worker.'},503)}
+}
