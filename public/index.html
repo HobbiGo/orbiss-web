@@ -282,3 +282,20 @@ form.onsubmit=async event=>{event.preventDefault();if(!form.reportValidity())ret
 }catch(error){status.textContent=error.message}};
 reloadNewsButton.onclick=async()=>{await loadNews();await refreshNewsAccess()};newsSearchInput.oninput=drawNews;window.addEventListener('hashchange',()=>{if(location.hash==='#news'){loadNews();refreshNewsAccess()}});loadNews();refreshNewsAccess();
 </script><style>#news .card{min-width:0}#news .card h2{overflow-wrap:anywhere}#news .actions{flex-wrap:wrap;gap:8px}#news button[hidden]{display:none}#utilityContent textarea{width:100%;line-height:1.6}#utilityContent .account-form .actions button{width:auto}#news input{max-width:100%}</style></body></html>
+<style>
+@media(max-width:760px){
+.app>nav#mainNav{display:none!important}.app{padding:0 12px 100px!important}header{padding:10px 0!important;gap:8px}header .logo{font-size:24px}header button{padding:9px 10px;font-size:12px}main{min-width:0}#status:empty{display:none}.page>h1{font-size:28px}.hero{padding:20px!important;min-height:0!important}.hero h1{font-size:32px!important;line-height:1.12}.hero p{font-size:14px}.mobile-feature-grid button{min-height:68px}.bottom{max-width:none;width:100%;padding:7px 6px calc(7px + env(safe-area-inset-bottom));border-radius:12px 12px 0 0}.bottom button{min-height:44px;font-size:11px}.live-workspace{gap:10px}.stream-heading{padding:10px}.stream-heading h2{margin:5px 0}.stream-heading .concept-note{display:none}.youtube-controls{gap:8px;padding:10px 0}.youtube-controls button{white-space:normal;min-height:44px}.workspace-chat{margin:0!important}.workspace-sponsors{margin:0!important}.youtube-start .badge{display:none}.youtube-start h2{font-size:17px}.youtube-start p{font-size:11px!important;margin:4px 0!important}.youtube-start button{min-height:40px}dialog{max-height:85dvh;overflow:auto}input,textarea,select{font-size:16px!important}
+}
+.orbiss-wide{position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;z-index:1000!important;background:#030812!important;padding:0!important;overflow:auto!important}.orbiss-wide .player.youtube-demo{height:calc(100dvh - 115px)!important;aspect-ratio:auto!important}.orbiss-wide .youtube-controls{padding:8px!important}.orbiss-wide .stream-heading{display:none}.stream-stage:fullscreen{background:#030812;overflow:auto}.stream-stage:fullscreen .player.youtube-demo{height:calc(100dvh - 100px);aspect-ratio:auto}
+</style>
+<script>
+(()=>{
+const stage=document.querySelector('#live .stream-stage');
+const controls=stage&&stage.querySelector('.youtube-controls');
+if(!stage||!controls)return;
+const expand=document.createElement('button');expand.type='button';expand.textContent='Perbesar video';expand.setAttribute('aria-pressed','false');
+function reset(){stage.classList.remove('orbiss-wide');expand.textContent='Perbesar video';expand.setAttribute('aria-pressed','false')}
+expand.onclick=async()=>{if(document.fullscreenElement===stage){try{await document.exitFullscreen()}catch(e){}reset();return}if(stage.classList.contains('orbiss-wide')){reset();return}stage.classList.add('orbiss-wide');expand.textContent='Kembali ke Live';expand.setAttribute('aria-pressed','true');if(stage.requestFullscreen){try{await stage.requestFullscreen()}catch(e){/* Wide-screen fallback stays available. */}}};
+document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement)reset()});window.addEventListener('hashchange',reset);controls.append(expand);
+})();
+</script>
