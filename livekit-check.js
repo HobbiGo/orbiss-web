@@ -11,6 +11,7 @@ export async function signCheckToken(key,secret,now=Math.floor(Date.now()/1000))
 }
 export async function handleLivekitCheck(request,env){
  if(request.method!=='GET')return json({ok:false,code:'METHOD_NOT_ALLOWED'},405);
+ let stage='moderator_session';
  try{
   const checkURL=new URL('/api/moderation/session',request.url);
   const access=await handleModeration(new Request(checkURL,{method:'GET',headers:request.headers}),env);
@@ -23,13 +24,17 @@ export async function handleLivekitCheck(request,env){
   let server;try{server=new URL(env.LIVEKIT_URL.trim())}catch{return json({ok:false,code:'INVALID_PROJECT_URL'},503)}
   if(server.protocol!=='wss:'||server.hostname!=='orbiss-fla6j6tm.livekit.cloud'||server.port||server.username||server.password||server.search||server.hash||(server.pathname&&server.pathname!=='/'))return json({ok:false,code:'INVALID_PROJECT_URL'},503);
   if(!env.AUTH_RATE_LIMITER)return json({ok:false,code:'RATE_LIMITER_MISSING'},503);
+  stage='rate_limit';
   const permitted=await env.AUTH_RATE_LIMITER.limit({key:'orbiss-livekit-check:'+String(request.headers.get('CF-Connecting-IP')||'moderator')});
   if(!permitted.success)return json({ok:false,code:'WAIT_ONE_MINUTE'},429);
+  stage='token_signing';
   const token=await signCheckToken(env.LIVEKIT_API_KEY.trim(),env.LIVEKIT_API_SECRET.trim());
-  const response=await fetch('https://'+server.hostname+'/twirp/livekit.RoomService/ListRooms',{method:'POST',redirect:'error',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:'{}',signal:AbortSignal.timeout(12000)});
+  stage='livekit_request';
+  const response=await fetch('https://'+server.hostname+'/twirp/livekit.RoomService/ListRooms',{method:'POST',redirect:'manual',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:'{}',signal:AbortSignal.timeout(12000)});
   if(!response.ok)return json({ok:false,code:response.status===401||response.status===403?'CREDENTIAL_PAIR_REJECTED':'LIVEKIT_SERVICE_ERROR',serviceStatus:response.status,configured},502);
   // Only report authentication success, never room names, participant data, credentials or provider response bodies.
+  stage='livekit_response';
   const result=await response.json();if(!result||typeof result!=='object'||(result.rooms!==undefined&&!Array.isArray(result.rooms)))return json({ok:false,code:'UNEXPECTED_SERVICE_RESPONSE'},502);
   return json({ok:true,code:'LIVEKIT_CONNECTED',configured,check:'authenticated_read_only',talkShowReady:false,message:'Kredensial diterima LiveKit. Ruang talk show belum diaktifkan.'});
- }catch{return json({ok:false,code:'CHECK_FAILED',message:'Pemeriksaan belum berhasil. Periksa koneksi dan log Worker tanpa membagikan secret.'},503)}
+ }catch(error){const category=['AbortError','TimeoutError','TypeError','SyntaxError','OperationError','DataError','InvalidAccessError','NotSupportedError'].includes(error?.name)?error.name:'RuntimeError';return json({ok:false,code:'CHECK_FAILED',stage,category,diagnosticVersion:2,message:'Tahap pemeriksaan tersedia. Key, secret, token, dan rincian error mentah tidak ditampilkan.'},503)}
 }
