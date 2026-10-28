@@ -972,4 +972,15 @@ body{background-color:#030d1c!important;background-image:linear-gradient(180deg,
 #live .talk-expanded .youtube-controls{grid-row:4!important}
 @media(max-width:600px){.orbiss-talk-dock>.actions{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))}.orbiss-talk-dock>.actions button{width:100%}#live .talk-expanded .orbiss-talk-dock>.actions button{width:auto!important;flex:1 0 auto}}
 </style>
+
+<style>
+/* Make the actual stadium artwork visible rather than hiding it under near-opaque tint. */
+body{background-image:linear-gradient(180deg,rgba(2,10,24,.22),rgba(2,10,24,.46)),var(--orbiss-stadium-image)!important;background-position:center center!important;background-size:cover!important}
+.hero{background-image:linear-gradient(90deg,rgba(3,15,32,.68),rgba(3,21,42,.08)),var(--orbiss-stadium-image)!important;background-position:center 60%!important;background-size:cover!important;box-shadow:0 16px 48px #0005!important}
+.hero h1,.hero h2,.hero p{position:relative;text-shadow:0 2px 10px #000,0 1px 3px #000}
+#live .stream-heading{background-image:linear-gradient(90deg,rgba(3,15,32,.82),rgba(3,21,42,.22)),var(--orbiss-stadium-image)!important;background-position:center 58%!important;background-size:cover!important}
+#live .stream-heading h2,#live .stream-heading .badge,#live .stream-heading .concept-note{text-shadow:0 2px 6px #000}
+/* Keep the source video and discussion opaque and legible; artwork is not an overlay on video. */
+#live .orbiss-live-frame{background:#020a14!important}
+</style>
 </body></html>
