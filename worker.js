@@ -1,3 +1,5 @@
+import { handleTalk } from './talk-room.js';
+export { OrbissTalkRoom } from './talk-room.js';
 import { handleLivekitCheck } from './livekit-check.js';
 import { handleAuth, handleCommunity, handleModeration, handleRestore, handleClub, handleLiveVideo, handleNews } from './auth.js';
 const json = (body, status = 200) => Response.json(body, {
@@ -6,7 +8,7 @@ const json = (body, status = 200) => Response.json(body, {
 });
 export default {
   async fetch(request, env) {
-    const url = new URL(request.url); if (url.pathname === '/api/talk/check') return handleLivekitCheck(request, env); if (url.pathname === "/api/news" || url.pathname.startsWith("/api/news/")) return handleNews(request, env); if (url.pathname === "/api/live/video") return handleLiveVideo(request, env); if (url.pathname === "/api/me/club") return handleClub(request, env); if (url.pathname === "/api/moderation/hidden" || url.pathname === "/api/moderation/restore") return handleRestore(request, env); if (url.pathname === "/api/reports" || url.pathname.startsWith("/api/moderation/")) return handleModeration(request, env); if (url.pathname.startsWith("/api/auth/")) return handleAuth(request, env); if (url.pathname === "/api/posts" || url.pathname.startsWith("/api/posts/")) return handleCommunity(request, env);
+    const url = new URL(request.url); if (url.pathname.startsWith('/api/talk/') && url.pathname !== '/api/talk/check') return handleTalk(request, env); if (url.pathname === '/api/talk/check') return handleLivekitCheck(request, env); if (url.pathname === "/api/news" || url.pathname.startsWith("/api/news/")) return handleNews(request, env); if (url.pathname === "/api/live/video") return handleLiveVideo(request, env); if (url.pathname === "/api/me/club") return handleClub(request, env); if (url.pathname === "/api/moderation/hidden" || url.pathname === "/api/moderation/restore") return handleRestore(request, env); if (url.pathname === "/api/reports" || url.pathname.startsWith("/api/moderation/")) return handleModeration(request, env); if (url.pathname.startsWith("/api/auth/")) return handleAuth(request, env); if (url.pathname === "/api/posts" || url.pathname.startsWith("/api/posts/")) return handleCommunity(request, env);
     if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
     if (url.pathname === '/api/turnstile/verify') return verifyTurnstile(request, env);
     if (request.method !== 'GET') return json({ error: 'Endpoint perubahan data belum tersedia.' }, 405);
