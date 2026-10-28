@@ -124,23 +124,23 @@ profileButton.onclick=async()=>{
  utilityContent.append(element('p','Tahap uji perlindungan formulir. Verifikasi ini belum mendaftarkan akun. Pendaftaran dan login belum aktif.','account-banner'));
  const holder=element('div');const submit=element('button','Uji verifikasi server','primary');submit.type='button';submit.disabled=true;
  const result=element('p','Memuat pemeriksaan keamanan…','profile-note');result.setAttribute('role','status');utilityContent.append(holder,submit,result);
- let token='';let busy=false;
+ let token='';let busy=false;let verified=false;let finalMessage='';
  try{
   const api=await loadOrbissTurnstile();if(!holder.isConnected||!utility.open)return;
   orbissWidgetId=api.render(holder,{sitekey:'0x4AAAAAAFpVcCWlM8_CIzqI',action:'orbiss_signup',theme:'dark',
-   callback:value=>{token=value;submit.disabled=busy;result.textContent='Pemeriksaan browser selesai. Tekan tombol untuk memvalidasi ke server.'},
-   'expired-callback':()=>{token='';submit.disabled=true;result.textContent='Verifikasi kedaluwarsa. Tunggu tantangan baru.'},
-   'error-callback':()=>{token='';submit.disabled=true;result.textContent='Pemeriksaan gagal. Periksa hostname widget dan koneksi internet.'}
+   callback:value=>{token=value;submit.disabled=busy||verified;if(!finalMessage)result.textContent='Pemeriksaan browser selesai. Tekan tombol untuk memvalidasi ke server.'},
+   'expired-callback':()=>{token='';submit.disabled=true;if(!finalMessage)result.textContent='Verifikasi kedaluwarsa. Tunggu tantangan baru.'},
+   'error-callback':()=>{token='';submit.disabled=true;if(!finalMessage)result.textContent='Pemeriksaan gagal. Periksa hostname widget dan koneksi internet.'}
   });
  }catch(error){result.textContent=error.message;return}
  submit.onclick=async()=>{
-  if(!token||busy)return;busy=true;submit.disabled=true;result.textContent='Memvalidasi ke server…';
+  if(!token||busy||verified)return;busy=true;finalMessage='';submit.textContent='Memeriksa…';submit.disabled=true;result.textContent='Memvalidasi ke server…';
   try{
    const response=await fetch('/api/turnstile/verify',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({token}),signal:AbortSignal.timeout(15000)});
    const data=await response.json();if(!response.ok||data.verified!==true)throw new Error(data.error||'Endpoint verifikasi belum tersedia atau verifikasi ditolak.');
-   result.textContent='Verifikasi Turnstile dan server berhasil. Belum ada akun dibuat.';
-  }catch(error){result.textContent=error.message||'Tidak dapat terhubung ke server.'}
-  finally{busy=false;token='';if(window.turnstile&&orbissWidgetId!==undefined)window.turnstile.reset(orbissWidgetId)}
+   verified=true;finalMessage='HASIL SERVER: Verifikasi berhasil. Belum ada akun dibuat.';result.textContent=finalMessage;submit.textContent='Server terverifikasi';
+  }catch(error){finalMessage='HASIL SERVER: '+(error.message||'Tidak dapat terhubung ke server.');result.textContent=finalMessage;submit.textContent='Coba verifikasi lagi'}
+  finally{busy=false;token='';submit.disabled=true;if(!verified&&window.turnstile&&orbissWidgetId!==undefined)window.turnstile.reset(orbissWidgetId)}
  };
 };
 </script></body></html>
