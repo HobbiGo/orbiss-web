@@ -177,3 +177,42 @@ export async function handleClub(request,env){
   return result({ok:true,clubName:club,storage:'account_database'});
  }catch{return result({error:'Pilihan klub belum dapat disimpan atau dibaca. Coba lagi setelah memeriksa koneksi.'},503)}
 }
+
+function youtubeVideoId(value){
+ if(typeof value!=='string'||value.length>2048)return null;
+ try{
+  const url=new URL(value.trim());if(url.protocol!=='https:'||url.username||url.password||url.port)return null;
+  const host=url.hostname.toLowerCase();let id;
+  if(['youtu.be','www.youtu.be'].includes(host)){const parts=url.pathname.split('/').filter(Boolean);if(parts.length!==1)return null;id=parts[0]}
+  else if(['youtube.com','www.youtube.com','m.youtube.com'].includes(host)){
+   if(url.pathname==='/watch')id=url.searchParams.get('v');
+   else{const parts=url.pathname.split('/').filter(Boolean);if(parts.length!==2||!['live','shorts','embed'].includes(parts[0]))return null;id=parts[1]}
+  }else return null;
+  return typeof id==='string'&&/^[A-Za-z0-9_-]{11}$/.test(id)?id:null;
+ }catch{return null}
+}
+export async function handleLiveVideo(request,env){
+ try{
+  if(!env.DB)return result({error:'Database belum terhubung.'},503);
+  if(request.method==='GET'){
+   const row=await env.DB.prepare('SELECT youtube_id,title,updated_at FROM live_video WHERE id=1').first();if(!row)return result({error:'Video demo belum dikonfigurasi.'},404);
+   return result({videoId:row.youtube_id,title:row.title,updatedAt:row.updated_at,sourceUrl:'https://youtu.be/'+row.youtube_id,mode:'demo',playability:'not_verified'});
+  }
+  if(request.method!=='PUT')return result({error:'Metode tidak diizinkan.'},405);
+  if(request.headers.get('Origin')!==new URL(request.url).origin)return result({error:'Origin tidak diizinkan.'},403);
+  const session=await getSession(request,env);if(!session)return result({error:'Masuk terlebih dahulu.'},401);
+  const moderator=await env.DB.prepare('SELECT user_id FROM moderators WHERE user_id=?').bind(session.row.id).first();if(!moderator)return result({error:'Hanya moderator yang boleh mengganti video.'},403);
+  if(!equal(await hash(request.headers.get('X-CSRF-Token')||''),session.row.csrf_token_hash))return result({error:'Sesi keamanan berubah. Muat ulang halaman.'},403);
+  if(!env.AUTH_RATE_LIMITER)return result({error:'Pembatasan permintaan belum tersedia.'},503);
+  const allowed=await env.AUTH_RATE_LIMITER.limit({key:'orbiss-live-video:'+session.row.id});if(!allowed.success)return result({error:'Terlalu banyak perubahan. Tunggu sekitar satu menit.'},429);
+  const body=await readBody(request);const id=youtubeVideoId(body.youtubeUrl);const title=typeof body.title==='string'?body.title.trim():'';
+  if(!id)return result({error:'Masukkan tautan HTTPS video YouTube yang valid, bukan kanal atau playlist.'},400);
+  if(!title||title.length>120||/[\u0000-\u001f\u007f]/.test(title))return result({error:'Judul harus 1–120 karakter tanpa karakter kontrol.'},400);
+  // Audit and update run atomically. The previous source is copied from D1, not from the browser.
+  await env.DB.batch([
+   env.DB.prepare('INSERT INTO live_video_audit (id,moderator_id,previous_video_id,new_video_id,previous_title,new_title) SELECT ?,?,youtube_id,?,title,? FROM live_video WHERE id=1').bind(crypto.randomUUID(),session.row.id,id,title),
+   env.DB.prepare('INSERT INTO live_video (id,youtube_id,title,updated_by,updated_at) VALUES (1,?,?,?,unixepoch()) ON CONFLICT(id) DO UPDATE SET youtube_id=excluded.youtube_id,title=excluded.title,updated_by=excluded.updated_by,updated_at=excluded.updated_at').bind(id,title,session.row.id)
+  ]);
+  return result({ok:true,videoId:id,title,mode:'demo',playability:'not_verified',message:'Sumber demo tersimpan. Izin penyematan dan pemutaran tetap perlu diuji.'});
+ }catch(error){console.error('ORBISS live video config failed',error instanceof Error?error.message:'Unknown database error');return result({error:'Konfigurasi video belum dapat dibaca atau disimpan. Periksa tabel live_video dan log Worker.'},503)}
+}
