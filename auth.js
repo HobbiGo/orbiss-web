@@ -1,0 +1,45 @@
+// ORBISS private account pilot. Email verification/recovery not yet implemented.
+const encoder=new TextEncoder();
+const ITERATIONS=100000; // PBKDF2 pilot baseline; review/harden before public launch.
+const SESSION_SECONDS=86400;
+const COOKIE='__Host-orbiss_session';
+const encode=bytes=>Array.from(new Uint8Array(bytes),v=>v.toString(16).padStart(2,'0')).join('');
+const random=()=>encode(crypto.getRandomValues(new Uint8Array(32)));
+const hash=async value=>encode(await crypto.subtle.digest('SHA-256',encoder.encode(value)));
+function equal(a,b){if(typeof a!=='string'||typeof b!=='string'||a.length!==b.length)return false;let diff=0;for(let i=0;i<a.length;i++)diff|=a.charCodeAt(i)^b.charCodeAt(i);return diff===0}
+function result(data,status=200,cookie){const headers={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'};if(cookie)headers['Set-Cookie']=cookie;return Response.json(data,{status,headers})}
+function cookieValue(request){const match=(request.headers.get('Cookie')||'').split(';').map(v=>v.trim()).find(v=>v.startsWith(COOKIE+'='));const token=match?match.slice(COOKIE.length+1):'';return /^[a-f0-9]{64}$/.test(token)?token:null}
+async function derive(password,salt,iterations){const key=await crypto.subtle.importKey('raw',encoder.encode(password),'PBKDF2',false,['deriveBits']);return encode(await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:encoder.encode(salt),iterations},key,256))}
+async function readBody(request){if(!(request.headers.get('Content-Type')||'').includes('application/json'))throw new Error('INVALID_BODY');const reader=request.body?.getReader();if(!reader)throw new Error('INVALID_BODY');const chunks=[];let size=0;try{while(true){const {value,done}=await reader.read();if(done)break;size+=value.byteLength;if(size>8192){await reader.cancel();throw new Error('INVALID_BODY')}chunks.push(value)}}finally{reader.releaseLock()}const all=new Uint8Array(size);let offset=0;for(const chunk of chunks){all.set(chunk,offset);offset+=chunk.length}return JSON.parse(new TextDecoder().decode(all))}
+async function getSession(request,env){const token=cookieValue(request);if(!token)return null;const row=await env.DB.prepare(`SELECT s.token_hash,s.csrf_token_hash,u.id,u.display_name,u.club_name,u.email_verified_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>?`).bind(await hash(token),Math.floor(Date.now()/1000)).first();if(!row)return null;return {row,csrf:await hash('csrf:'+token)}}
+const publicUser=row=>({id:row.id,displayName:row.display_name,clubName:row.club_name||null,emailVerified:!!row.email_verified_at});
+async function newSession(request,env,user){const token=random();const csrf=await hash('csrf:'+token);const tokenHash=await hash(token);const now=Math.floor(Date.now()/1000);const old=cookieValue(request);if(old)await env.DB.prepare('DELETE FROM sessions WHERE token_hash=?').bind(await hash(old)).run();await env.DB.prepare('INSERT INTO sessions (token_hash,user_id,csrf_token_hash,expires_at) VALUES (?,?,?,?)').bind(tokenHash,user.id,await hash(csrf),now+SESSION_SECONDS).run();return {csrf,cookie:`${COOKIE}=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${SESSION_SECONDS}`}}
+async function challenge(body,request,env){if(typeof body.token!=='string'||body.token.length>2048||!body.token)return false;const response=await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({secret:env.TURNSTILE_SECRET_KEY,response:body.token}),signal:AbortSignal.timeout(10000)});if(!response.ok)return false;const data=await response.json();return data.success===true&&data.hostname===new URL(request.url).hostname&&data.action==='orbiss_signup'}
+export async function handleAuth(request,env){const path=new URL(request.url).pathname;
+ if(!env.DB)return result({error:'Database belum terhubung.'},503);
+ try{
+  if(path==='/api/auth/session'&&request.method==='GET'){const session=await getSession(request,env);return result({user:session?publicUser(session.row):null,csrfToken:session?session.csrf:null,mode:'private_pilot',emailVerification:'not_implemented',passwordRecovery:'not_implemented'})}
+  if(request.method!=='POST')return result({error:'Metode tidak diizinkan.'},405);
+  if(request.headers.get('Origin')!==new URL(request.url).origin)return result({error:'Origin tidak diizinkan.'},403);
+  if(path==='/api/auth/logout'){const session=await getSession(request,env);if(session){const sent=request.headers.get('X-CSRF-Token')||'';if(!equal(await hash(sent),session.row.csrf_token_hash))return result({error:'Sesi keamanan tidak valid. Muat ulang.'},403);await env.DB.prepare('DELETE FROM sessions WHERE token_hash=?').bind(session.row.token_hash).run()}return result({ok:true},200,`${COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0`)}
+  if(!['/api/auth/register','/api/auth/login'].includes(path))return result({error:'Endpoint akun tidak tersedia.'},404);
+  if(!env.TURNSTILE_SECRET_KEY||!env.AUTH_RATE_LIMITER)return result({error:'Perlindungan akun belum dikonfigurasi. Periksa secret dan rate limiter.'},503);
+  const ip=request.headers.get('CF-Connecting-IP');if(!ip)return result({error:'Identitas jaringan tidak tersedia.'},503);
+  const limit=await env.AUTH_RATE_LIMITER.limit({key:'orbiss-auth:'+await hash(ip)});if(!limit.success)return result({error:'Terlalu banyak percobaan. Tunggu sekitar satu menit.'},429);
+  const body=await readBody(request);const email=typeof body.email==='string'?body.email.trim().toLowerCase():'';const password=body.password;
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254||typeof password!=='string'||password.length<12||password.length>128)return result({error:'Isi email valid dan password 12–128 karakter.'},400);
+  if(!(await challenge(body,request,env)))return result({error:'Turnstile ditolak atau kedaluwarsa. Coba tantangan baru.'},400);
+  let user;
+  if(path.endsWith('/register')){
+   const name=typeof body.displayName==='string'?body.displayName.trim():'';if(name.length<2||name.length>60)return result({error:'Nama tampilan harus 2–60 karakter.'},400);
+   const existing=await env.DB.prepare('SELECT id FROM users WHERE email=?').bind(email).first();if(existing)return result({error:'Pendaftaran tidak dapat diselesaikan. Coba masuk bila sudah memiliki akun.'},400);
+   const salt=random();const passwordHash=await derive(password,salt,ITERATIONS);const id=crypto.randomUUID();
+   await env.DB.prepare('INSERT INTO users (id,email,display_name,password_hash,password_salt,password_iterations) VALUES (?,?,?,?,?,?)').bind(id,email,name,passwordHash,salt,ITERATIONS).run();user={id,display_name:name,club_name:null,email_verified_at:null};
+  }else{
+   user=await env.DB.prepare('SELECT id,display_name,club_name,email_verified_at,password_hash,password_salt,password_iterations FROM users WHERE email=?').bind(email).first();
+   const candidate=await derive(password,user?user.password_salt:'orbiss-dummy-salt-v1',user?user.password_iterations:ITERATIONS);
+   if(!user||!equal(candidate,user.password_hash))return result({error:'Email atau password tidak cocok.'},401);
+  }
+  const session=await newSession(request,env,user);return result({ok:true,user:publicUser(user),csrfToken:session.csrf,emailVerification:'not_implemented',message:'Akun uji terbatas. Email belum diverifikasi.'},path.endsWith('/register')?201:200,session.cookie);
+ }catch{return result({error:'Permintaan akun gagal. Jangan ulang cepat; periksa log Worker tanpa membagikan password atau token.'},503)}
+}

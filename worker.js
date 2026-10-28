@@ -1,3 +1,4 @@
+import { handleAuth } from './auth.js';
 // ORBISS backend stage 2: database readiness and public Community reads.
 // Account creation, login and writes are intentionally not implemented yet.
 const json = (body, status = 200) => Response.json(body, {
@@ -6,7 +7,7 @@ const json = (body, status = 200) => Response.json(body, {
 });
 export default {
   async fetch(request, env) {
-    const url = new URL(request.url);
+    const url = new URL(request.url); if (url.pathname.startsWith("/api/auth/")) return handleAuth(request, env);
     if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
     if (url.pathname === '/api/turnstile/verify') return verifyTurnstile(request, env);
     if (request.method !== 'GET') return json({ error: 'Endpoint perubahan data belum tersedia.' }, 405);
