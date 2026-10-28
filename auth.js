@@ -127,3 +127,31 @@ export async function handleModeration(request,env){
   return result({ok:true,action:body.action});
  }catch{return result({error:'Moderasi belum tersedia atau permintaan gagal. Periksa tabel moderasi dan log Worker.'},503)}
 }
+
+export async function handleRestore(request,env){
+ try{
+  if(!env.DB)return result({error:'Database belum tersedia.'},503);
+  const session=await getSession(request,env);if(!session)return result({error:'Masuk terlebih dahulu.'},401);
+  const moderator=await env.DB.prepare('SELECT user_id FROM moderators WHERE user_id=?').bind(session.row.id).first();if(!moderator)return result({error:'Akses moderator diperlukan.'},403);
+  const url=new URL(request.url);
+  if(url.pathname==='/api/moderation/hidden'&&request.method==='GET'){
+   const {results}=await env.DB.prepare(`SELECT 'post' AS targetType,p.id,p.body AS content,p.created_at AS createdAt,u.display_name AS author,0 AS parentHidden FROM posts p JOIN users u ON u.id=p.user_id WHERE p.moderation_status='hidden'
+    UNION ALL SELECT 'comment' AS targetType,c.id,c.body AS content,c.created_at AS createdAt,u.display_name AS author,CASE WHEN p.moderation_status='visible' THEN 0 ELSE 1 END AS parentHidden FROM comments c JOIN users u ON u.id=c.user_id JOIN posts p ON p.id=c.post_id WHERE c.moderation_status='hidden'
+    ORDER BY createdAt DESC,id DESC LIMIT 50`).all();return result({items:results,limit:50,scope:'latest_hidden_content'});
+  }
+  if(url.pathname!=='/api/moderation/restore'||request.method!=='POST')return result({error:'Endpoint atau metode tidak tersedia.'},405);
+  if(request.headers.get('Origin')!==url.origin)return result({error:'Origin tidak diizinkan.'},403);
+  if(!equal(await hash(request.headers.get('X-CSRF-Token')||''),session.row.csrf_token_hash))return result({error:'Sesi keamanan berubah. Muat ulang.'},403);
+  if(!env.AUTH_RATE_LIMITER)return result({error:'Pembatasan permintaan belum tersedia.'},503);
+  const allowed=await env.AUTH_RATE_LIMITER.limit({key:'orbiss-restore:'+session.row.id});if(!allowed.success)return result({error:'Tunggu sekitar satu menit sebelum mencoba lagi.'},429);
+  const body=await readBody(request);if(!['post','comment'].includes(body.targetType)||typeof body.targetId!=='string'||!/^[a-zA-Z0-9_-]{1,100}$/.test(body.targetId))return result({error:'Konten tidak valid.'},400);
+  const isPost=body.targetType==='post';const table=isPost?'posts':'comments';
+  const outcomes=await env.DB.batch([
+   env.DB.prepare(`INSERT INTO restoration_audit (id,moderator_id,target_type,target_id) SELECT ?,?,?,? WHERE EXISTS(SELECT 1 FROM ${table} WHERE id=? AND moderation_status='hidden')`).bind(crypto.randomUUID(),session.row.id,body.targetType,body.targetId,body.targetId),
+   env.DB.prepare(`UPDATE ${table} SET moderation_status='visible' WHERE id=? AND moderation_status='hidden'`).bind(body.targetId)
+  ]);
+  if(outcomes[1].meta.changes!==1)return result({error:'Konten tidak ditemukan atau sudah dipulihkan. Muat ulang daftar.'},409);
+  let parentHidden=false;if(!isPost){const parent=await env.DB.prepare('SELECT p.moderation_status FROM posts p JOIN comments c ON c.post_id=p.id WHERE c.id=?').bind(body.targetId).first();parentHidden=parent?.moderation_status!=='visible'}
+  return result({ok:true,parentHidden,message:parentHidden?'Komentar dipulihkan, tetapi postingan induknya masih tersembunyi.':'Konten berhasil dipulihkan.'});
+ }catch{return result({error:'Pemulihan gagal. Periksa tabel restoration_audit dan log Worker.'},503)}
+}
