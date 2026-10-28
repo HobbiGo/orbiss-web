@@ -84,3 +84,46 @@ export async function handleCommunity(request,env){
   return result({ok:true,likedByMe:body.liked});
  }catch{return result({error:'Permintaan Community gagal. Tidak ada keberhasilan yang dapat dikonfirmasi.'},503)}
 }
+
+export async function handleModeration(request,env){
+ const path=new URL(request.url).pathname;
+ try{
+  if(!env.DB)return result({error:'Database belum tersedia.'},503);
+  const session=await getSession(request,env);
+  const moderator=session?await env.DB.prepare('SELECT user_id FROM moderators WHERE user_id=?').bind(session.row.id).first():null;
+  if(path==='/api/moderation/session'&&request.method==='GET')return result({isModerator:!!moderator});
+  if(!session)return result({error:'Masuk ke akun terlebih dahulu.'},401);
+  if(path==='/api/moderation/reports'&&request.method==='GET'){
+   if(!moderator)return result({error:'Akses moderator diperlukan.'},403);
+   const {results}=await env.DB.prepare(`SELECT r.id,r.target_type,r.target_id,r.reason,r.details,r.status,r.created_at,
+    CASE WHEN r.target_type='post' THEN (SELECT body FROM posts WHERE id=r.target_id) ELSE (SELECT body FROM comments WHERE id=r.target_id) END AS content
+    FROM reports r WHERE r.status='pending' ORDER BY r.created_at,r.id LIMIT 50`).all();return result({items:results,limit:50});
+  }
+  if(request.method!=='POST')return result({error:'Metode tidak diizinkan.'},405);
+  if(request.headers.get('Origin')!==new URL(request.url).origin)return result({error:'Origin tidak diizinkan.'},403);
+  if(!equal(await hash(request.headers.get('X-CSRF-Token')||''),session.row.csrf_token_hash))return result({error:'Sesi keamanan berubah. Muat ulang halaman.'},403);
+  if(!env.AUTH_RATE_LIMITER)return result({error:'Pembatasan permintaan belum tersedia.'},503);
+  const limit=await env.AUTH_RATE_LIMITER.limit({key:'orbiss-reports:'+session.row.id});if(!limit.success)return result({error:'Terlalu banyak permintaan. Tunggu sekitar satu menit.'},429);
+  const body=await readBody(request);
+  if(path==='/api/reports'){
+   if(!['post','comment'].includes(body.targetType)||typeof body.targetId!=='string'||!/^[a-zA-Z0-9_-]{1,100}$/.test(body.targetId)||!['spam','abuse','other'].includes(body.reason))return result({error:'Laporan tidak valid.'},400);
+   const details=typeof body.details==='string'?body.details.trim():'';if(details.length>500)return result({error:'Detail maksimal 500 karakter.'},400);
+   const target=body.targetType==='post'?await env.DB.prepare("SELECT id FROM posts WHERE id=? AND moderation_status='visible'").bind(body.targetId).first():await env.DB.prepare("SELECT c.id FROM comments c JOIN posts p ON p.id=c.post_id WHERE c.id=? AND c.moderation_status='visible' AND p.moderation_status='visible'").bind(body.targetId).first();if(!target)return result({error:'Konten tidak tersedia.'},404);
+   const id=crypto.randomUUID();await env.DB.prepare('INSERT OR IGNORE INTO reports (id,reporter_id,target_type,target_id,reason,details) VALUES (?,?,?,?,?,?)').bind(id,session.row.id,body.targetType,body.targetId,body.reason,details).run();return result({ok:true,message:'Laporan tercatat atau sudah pernah dikirim. Konten belum otomatis disembunyikan.'});
+  }
+  const match=path.match(/^\/api\/moderation\/reports\/([a-zA-Z0-9_-]{1,100})\/review$/);
+  if(!match)return result({error:'Endpoint tidak tersedia.'},404);
+  if(!moderator)return result({error:'Akses moderator diperlukan.'},403);
+  if(!['hide','dismiss'].includes(body.action))return result({error:'Tindakan tidak valid.'},400);
+  const report=await env.DB.prepare("SELECT * FROM reports WHERE id=? AND status='pending'").bind(match[1]).first();if(!report)return result({error:'Laporan sudah ditinjau atau tidak ditemukan.'},409);
+  const statements=[];
+  if(body.action==='hide'){
+   const sql=report.target_type==='post'?"UPDATE posts SET moderation_status='hidden' WHERE id=? AND EXISTS(SELECT 1 FROM reports WHERE id=? AND status='pending')":"UPDATE comments SET moderation_status='hidden' WHERE id=? AND EXISTS(SELECT 1 FROM reports WHERE id=? AND status='pending')";
+   statements.push(env.DB.prepare(sql).bind(report.target_id,report.id));
+  }
+  statements.push(env.DB.prepare("INSERT INTO moderation_audit(id,moderator_id,report_id,action) SELECT ?,?,?,? WHERE EXISTS(SELECT 1 FROM reports WHERE id=? AND status='pending')").bind(crypto.randomUUID(),session.row.id,report.id,body.action,report.id));
+  statements.push(env.DB.prepare("UPDATE reports SET status=?,reviewer_id=?,reviewed_at=unixepoch() WHERE id=? AND status='pending'").bind(body.action==='hide'?'hidden':'dismissed',session.row.id,report.id));
+  const outcome=await env.DB.batch(statements);const final=outcome[outcome.length-1];if(final.meta.changes!==1)return result({error:'Laporan sudah ditinjau. Muat ulang.'},409);
+  return result({ok:true,action:body.action});
+ }catch{return result({error:'Moderasi belum tersedia atau permintaan gagal. Periksa tabel moderasi dan log Worker.'},503)}
+}
