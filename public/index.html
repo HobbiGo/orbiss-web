@@ -228,4 +228,31 @@ async function loadAccountClub(){accountClubRefresh.disabled=true;accountClubRef
 accountClubSave.onclick=async()=>{const name=accountClubInput.value.trim();if(name.length<2||name.length>80){accountClubStatus.textContent='Isi nama klub 2–80 karakter.';return}accountClubSave.disabled=true;accountClubStatus.textContent='Menyimpan ke akun…';try{const data=await communityAPI('/api/me/club','PUT',{clubName:name});accountClubTitle.textContent=data.clubName;accountClubInput.value=data.clubName;if(orbissAuthUser)orbissAuthUser.clubName=data.clubName;accountClubStatus.textContent='Klub favorit berhasil disimpan di D1 untuk akunmu.'}catch(error){accountClubStatus.textContent=error.message}finally{accountClubSave.disabled=false}};
 accountClubRefresh.onclick=loadAccountClub;window.addEventListener('hashchange',()=>{if(location.hash==='#my-club')loadAccountClub()});if(location.hash==='#my-club')loadAccountClub();
 const secondaryClubCard=document.querySelectorAll('#my-club .card')[1];if(secondaryClubCard){const paragraph=secondaryClubCard.querySelector('p');if(paragraph)paragraph.textContent='Preferensi klub tersimpan di akun. Jadwal, berita khusus klub, dan statistik belum memiliki sumber data terhubung.'}
-</script><style>#my-club .card>button{margin:8px 8px 0 0;white-space:nowrap}#my-club .note{line-height:1.6}#my-club #clubName{overflow-wrap:anywhere}</style></body></html>
+</script><style>#my-club .card>button{margin:8px 8px 0 0;white-space:nowrap}#my-club .note{line-height:1.6}#my-club #clubName{overflow-wrap:anywhere}</style>
+<style>
+#live .stream-stage .player.youtube-demo{display:block;aspect-ratio:16/9;min-height:0;padding:0;background:#030812;position:relative;overflow:hidden}
+#live .stream-stage .player.youtube-demo:before{display:none}
+.youtube-demo iframe{width:100%;height:100%;border:0;display:block;position:absolute;inset:0}
+.youtube-demo .youtube-start{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;background:radial-gradient(ellipse at bottom,#123b58,transparent 75%),#030812}
+.youtube-start h2{margin:10px 0;font-size:clamp(18px,3vw,28px)}
+.youtube-start p{max-width:540px;font-size:12px;line-height:1.5}
+.youtube-controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:14px 0}
+.youtube-controls a{color:#65deea;text-decoration:underline;font-size:13px}
+.youtube-controls button{font-size:12px;white-space:nowrap}
+@media(max-width:480px){.youtube-demo .youtube-start{padding:12px}.youtube-start h2{margin:6px 0;font-size:18px}.youtube-start p{margin:6px 0;font-size:11px}.youtube-start button{padding:9px 12px}}
+</style><script>
+// User-selected YouTube demo. No live-state or channel-ownership assertions.
+const youtubeStage=document.querySelector('#live .stream-stage');
+if(youtubeStage){
+ const youtubePlayer=youtubeStage.querySelector('.player');youtubePlayer.classList.add('youtube-demo');
+ const stageHeading=youtubeStage.querySelector('.stream-heading');if(stageHeading){stageHeading.replaceChildren(element('span','YOUTUBE • VIDEO DEMO','badge'),element('h2','Demo player ORBISS'),element('span','Status siaran langsung tidak diperiksa. Video ini digunakan untuk menguji player.','concept-note'))}
+ const demoControls=element('div',undefined,'youtube-controls');
+ const source=document.createElement('a');source.href='https://youtu.be/rlW4mzzmoes';source.target='_blank';source.rel='noopener noreferrer';source.textContent='Buka sumber di YouTube';
+ const resetVideo=element('button','Hentikan / muat ulang player');resetVideo.type='button';demoControls.append(source,resetVideo);
+ const embedNote=element('p','Jika video tidak dapat diputar atau penyematan ditolak oleh YouTube, gunakan tautan sumber. Pembatasan pemilik video, wilayah, dan usia tetap berlaku.','note');
+ youtubePlayer.after(demoControls,embedNote);
+ function youtubePlaceholder(){youtubePlayer.replaceChildren();const cover=element('div',undefined,'youtube-start');cover.append(element('span','VIDEO DEMO • BUKAN KLAIM SIARAN RESMI','badge'),element('h2','Tonton demo di ORBISS'),element('p','Tekan tombol untuk memuat pemutar YouTube. Saat dimuat, browser akan terhubung ke layanan YouTube.'));const start=element('button','Muat pemutar YouTube','primary');start.type='button';start.onclick=()=>{const frame=document.createElement('iframe');frame.title='Video demo YouTube pada ORBISS';frame.src='https://www.youtube-nocookie.com/embed/rlW4mzzmoes?playsinline=1';frame.allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';frame.allowFullscreen=true;frame.referrerPolicy='strict-origin-when-cross-origin';youtubePlayer.replaceChildren(frame)};cover.append(start);youtubePlayer.append(cover)}
+ resetVideo.onclick=youtubePlaceholder;youtubePlaceholder();
+ const badges=document.querySelector('#live>.feature-status');if(badges)badges.replaceChildren(element('span','YouTube • Demo player'),element('span','Status siaran belum diverifikasi'));
+}
+</script></body></html>
