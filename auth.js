@@ -43,3 +43,44 @@ export async function handleAuth(request,env){const path=new URL(request.url).pa
   const session=await newSession(request,env,user);return result({ok:true,user:publicUser(user),csrfToken:session.csrf,emailVerification:'not_implemented',message:'Akun uji terbatas. Email belum diverifikasi.'},path.endsWith('/register')?201:200,session.cookie);
  }catch{return result({error:'Permintaan akun gagal. Jangan ulang cepat; periksa log Worker tanpa membagikan password atau token.'},503)}
 }
+
+// Community private pilot: server-side ownership and CSRF for all writes.
+export async function handleCommunity(request,env){
+ const url=new URL(request.url);const path=url.pathname;
+ if(!env.DB)return result({error:'Database belum tersedia.'},503);
+ try{
+  const session=await getSession(request,env);
+  if(path==='/api/posts'&&request.method==='GET'){
+   const {results}=await env.DB.prepare(`SELECT p.id,p.body AS text,p.created_at AS createdAt,u.display_name AS author,
+    (SELECT COUNT(*) FROM likes l WHERE l.post_id=p.id) AS likeCount,
+    (SELECT COUNT(*) FROM comments c WHERE c.post_id=p.id AND c.moderation_status='visible') AS commentCount,
+    EXISTS(SELECT 1 FROM likes l WHERE l.post_id=p.id AND l.user_id=?) AS likedByMe
+    FROM posts p JOIN users u ON u.id=p.user_id WHERE p.moderation_status='visible'
+    ORDER BY p.created_at DESC,p.id DESC LIMIT 20`).bind(session?session.row.id:'').all();
+   return result({items:results,limit:20,scope:'latest_public_posts',mode:'private_pilot'});
+  }
+  const commentsMatch=path.match(/^\/api\/posts\/([a-zA-Z0-9_-]{1,100})\/comments$/);
+  const likeMatch=path.match(/^\/api\/posts\/([a-zA-Z0-9_-]{1,100})\/like$/);
+  if(commentsMatch&&request.method==='GET'){
+   const visible=await env.DB.prepare("SELECT id FROM posts WHERE id=? AND moderation_status='visible'").bind(commentsMatch[1]).first();if(!visible)return result({error:'Postingan tidak tersedia.'},404);
+   const {results}=await env.DB.prepare(`SELECT c.id,c.body AS text,c.created_at AS createdAt,u.display_name AS author FROM comments c JOIN users u ON u.id=c.user_id WHERE c.post_id=? AND c.moderation_status='visible' ORDER BY c.created_at DESC,c.id DESC LIMIT 50`).bind(commentsMatch[1]).all();
+   return result({items:results,limit:50,scope:'latest_public_comments'});
+  }
+  if(!((path==='/api/posts'&&request.method==='POST')||(commentsMatch&&request.method==='POST')||(likeMatch&&request.method==='PUT')))return result({error:'Endpoint atau metode tidak tersedia.'},405);
+  if(request.headers.get('Origin')!==url.origin)return result({error:'Origin tidak diizinkan.'},403);
+  if(!session)return result({error:'Masuk ke akun terlebih dahulu.'},401);
+  if(!equal(await hash(request.headers.get('X-CSRF-Token')||''),session.row.csrf_token_hash))return result({error:'Sesi keamanan berubah. Muat ulang halaman.'},403);
+  if(!env.AUTH_RATE_LIMITER)return result({error:'Pembatasan permintaan belum tersedia.'},503);
+  const allowed=await env.AUTH_RATE_LIMITER.limit({key:'orbiss-community:'+session.row.id});if(!allowed.success)return result({error:'Batas uji tercapai. Tunggu sekitar satu menit sebelum mencoba lagi.'},429);
+  const body=await readBody(request);
+  if(path==='/api/posts'){
+   const text=typeof body.text==='string'?body.text.trim():'';if(!text||text.length>1000)return result({error:'Postingan harus 1–1.000 karakter.'},400);
+   const id=crypto.randomUUID();await env.DB.prepare('INSERT INTO posts (id,user_id,body) VALUES (?,?,?)').bind(id,session.row.id,text).run();return result({ok:true,id},201);
+  }
+  const postId=(commentsMatch||likeMatch)[1];const post=await env.DB.prepare("SELECT id FROM posts WHERE id=? AND moderation_status='visible'").bind(postId).first();if(!post)return result({error:'Postingan tidak tersedia.'},404);
+  if(commentsMatch){const text=typeof body.text==='string'?body.text.trim():'';if(!text||text.length>500)return result({error:'Komentar harus 1–500 karakter.'},400);const id=crypto.randomUUID();await env.DB.prepare('INSERT INTO comments (id,post_id,user_id,body) VALUES (?,?,?,?)').bind(id,postId,session.row.id,text).run();return result({ok:true,id},201)}
+  if(typeof body.liked!=='boolean')return result({error:'Status suka tidak valid.'},400);
+  if(body.liked)await env.DB.prepare('INSERT OR IGNORE INTO likes (post_id,user_id) VALUES (?,?)').bind(postId,session.row.id).run();else await env.DB.prepare('DELETE FROM likes WHERE post_id=? AND user_id=?').bind(postId,session.row.id).run();
+  return result({ok:true,likedByMe:body.liked});
+ }catch{return result({error:'Permintaan Community gagal. Tidak ada keberhasilan yang dapat dikonfirmasi.'},503)}
+}

@@ -1,4 +1,4 @@
-import { handleAuth } from './auth.js';
+import { handleAuth, handleCommunity } from './auth.js';
 // ORBISS backend stage 2: database readiness and public Community reads.
 // Account creation, login and writes are intentionally not implemented yet.
 const json = (body, status = 200) => Response.json(body, {
@@ -7,7 +7,7 @@ const json = (body, status = 200) => Response.json(body, {
 });
 export default {
   async fetch(request, env) {
-    const url = new URL(request.url); if (url.pathname.startsWith("/api/auth/")) return handleAuth(request, env);
+    const url = new URL(request.url); if (url.pathname.startsWith("/api/auth/")) return handleAuth(request, env); if (url.pathname === "/api/posts" || url.pathname.startsWith("/api/posts/")) return handleCommunity(request, env);
     if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
     if (url.pathname === '/api/turnstile/verify') return verifyTurnstile(request, env);
     if (request.method !== 'GET') return json({ error: 'Endpoint perubahan data belum tersedia.' }, 405);
@@ -15,7 +15,7 @@ export default {
     try {
       if (url.pathname === '/api/health') {
         await env.DB.prepare('SELECT 1 AS ready').first();
-        return json({ ok: true, database: 'connected', accounts: 'not_implemented', community: 'read_api_only' });
+        return json({ ok: true, database: 'connected', accounts: 'private_pilot', community: 'authenticated_writes_pilot' });
       }
       if (url.pathname === '/api/schema-status') {
         const { results } = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('users','sessions','posts','likes','comments')").all();
