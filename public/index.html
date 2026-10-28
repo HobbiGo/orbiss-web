@@ -104,4 +104,43 @@ const symbols={home:'⌂',news:'▤',live:'▷',ai:'✧','watch-party':'◉',vid
 const homeSection=document.getElementById('home');const quickGrid=element('div',undefined,'mobile-feature-grid');for(const [id,label,symbol] of [['live','Live','▷'],['news','News','▤'],['watch-party','Watch Party','◉'],['ai','AI Analysis','✧'],['community','Community','♧'],['my-club','My Club','☆']]){const button=navButton(id,label);const icon=element('span',symbol,'feature-symbol');icon.setAttribute('aria-hidden','true');button.prepend(icon);quickGrid.append(button)}const homeHero=homeSection.querySelector('.hero');homeHero.after(quickGrid);const matchFocus=element('article',undefined,'card home-match-focus');matchFocus.append(element('span','MATCH CENTER • SUMBER DATA BELUM TERHUBUNG','badge'),element('h2','Pertandingan jadi pusat cerita.'),element('p','Nonton dari player lokal, lalu lanjutkan percakapan di Community. Jadwal dan siaran resmi menunggu integrasi sumber.'));matchFocus.append(navButton('live','Buka Live Center'));quickGrid.after(matchFocus);
 const liveSection=document.getElementById('live');const workspace=element('div',undefined,'live-workspace');const stage=element('div',undefined,'stream-stage');const streamHeading=element('div',undefined,'stream-heading');streamHeading.append(element('span','ORBISS LIVE • PRATINJAU ANTARMUKA','badge'),element('h2','Pusat pertandingan'),element('span','Belum ada pertandingan atau skor terhubung.','concept-note'));const mainPlayer=liveSection.querySelector('.player');stage.append(streamHeading,mainPlayer);const chat=element('aside',undefined,'card workspace-chat');chat.append(element('h2','Diskusi pertandingan'));const chatEmpty=element('div',undefined,'chat-empty');chatEmpty.append(element('span','CHAT BELUM TERHUBUNG','badge'),element('p','Belum ada pesan atau peserta online. Gunakan Community lokal untuk mencoba posting dan komentar.'));chat.append(chatEmpty,navButton('community','Buka Community'));const sponsor=element('aside',undefined,'card workspace-sponsors');sponsor.append(element('h2','Partner & Aktivitas'));for(const [title,description] of [['Partner Spotlight','Slot promosi produk sepak bola.'],['Polling pertandingan','Konsep polling, belum ada suara nyata.'],['Pengalaman penggemar','Slot penawaran partner mendatang.']]){const slot=element('div',undefined,'sponsor-slot');slot.append(element('span','KONSEP • BELUM AKTIF','badge'),element('p',title),element('p',description));sponsor.append(slot)}sponsor.append(element('p','Tidak ada sponsor resmi atau penawaran aktif yang diklaim pada prototipe ini.','concept-note'));workspace.append(stage,chat,sponsor);const introduction=Array.from(liveSection.children).find(node=>node.tagName==='P');if(introduction)introduction.after(workspace);else liveSection.append(workspace);
 document.querySelector('footer').append(element('div','V10 • Susunan desktop dan mobile mengikuti referensi konsep. Semua status koneksi tetap ditampilkan secara jujur.'));
+</script>
+<script>
+// Public Turnstile site key only. No secret keys in this file.
+let orbissTurnstileLoading;
+function loadOrbissTurnstile(){
+ if(window.turnstile)return Promise.resolve(window.turnstile);
+ if(!orbissTurnstileLoading)orbissTurnstileLoading=new Promise((resolve,reject)=>{
+  window.orbissTurnstileReady=()=>resolve(window.turnstile);
+  const script=document.createElement('script');
+  script.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=orbissTurnstileReady';script.async=true;script.defer=true;
+  script.onerror=()=>{orbissTurnstileLoading=null;script.remove();reject(new Error('Turnstile gagal dimuat.'))};document.head.append(script);
+ });return orbissTurnstileLoading;
+}
+let orbissWidgetId;
+profileButton.onclick=async()=>{
+ if(orbissWidgetId!==undefined&&window.turnstile){window.turnstile.remove(orbissWidgetId);orbissWidgetId=undefined}
+ openUtility('Buat akun ORBISS');
+ utilityContent.append(element('p','Tahap uji perlindungan formulir. Verifikasi ini belum mendaftarkan akun. Pendaftaran dan login belum aktif.','account-banner'));
+ const holder=element('div');const submit=element('button','Uji verifikasi server','primary');submit.type='button';submit.disabled=true;
+ const result=element('p','Memuat pemeriksaan keamanan…','profile-note');result.setAttribute('role','status');utilityContent.append(holder,submit,result);
+ let token='';let busy=false;
+ try{
+  const api=await loadOrbissTurnstile();if(!holder.isConnected||!utility.open)return;
+  orbissWidgetId=api.render(holder,{sitekey:'0x4AAAAAAFpVcCWlM8_CIzqI',action:'orbiss_signup',theme:'dark',
+   callback:value=>{token=value;submit.disabled=busy;result.textContent='Pemeriksaan browser selesai. Tekan tombol untuk memvalidasi ke server.'},
+   'expired-callback':()=>{token='';submit.disabled=true;result.textContent='Verifikasi kedaluwarsa. Tunggu tantangan baru.'},
+   'error-callback':()=>{token='';submit.disabled=true;result.textContent='Pemeriksaan gagal. Periksa hostname widget dan koneksi internet.'}
+  });
+ }catch(error){result.textContent=error.message;return}
+ submit.onclick=async()=>{
+  if(!token||busy)return;busy=true;submit.disabled=true;result.textContent='Memvalidasi ke server…';
+  try{
+   const response=await fetch('/api/turnstile/verify',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({token}),signal:AbortSignal.timeout(15000)});
+   const data=await response.json();if(!response.ok||data.verified!==true)throw new Error(data.error||'Endpoint verifikasi belum tersedia atau verifikasi ditolak.');
+   result.textContent='Verifikasi Turnstile dan server berhasil. Belum ada akun dibuat.';
+  }catch(error){result.textContent=error.message||'Tidak dapat terhubung ke server.'}
+  finally{busy=false;token='';if(window.turnstile&&orbissWidgetId!==undefined)window.turnstile.reset(orbissWidgetId)}
+ };
+};
 </script></body></html>
