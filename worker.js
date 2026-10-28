@@ -8,6 +8,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
+    if (url.pathname === '/api/turnstile/verify') return verifyTurnstile(request, env);
     if (request.method !== 'GET') return json({ error: 'Endpoint perubahan data belum tersedia.' }, 405);
     if (!env.DB) return json({ ok: false, database: 'not_bound' }, 503);
     try {
@@ -53,3 +54,27 @@ export default {
     }
   }
 };
+
+async function verifyTurnstile(request, env) {
+  if (request.method !== 'POST') return json({error:'Gunakan POST.'},405);
+  const url=new URL(request.url);
+  if (request.headers.get('Origin')!==url.origin) return json({error:'Origin tidak diizinkan.'},403);
+  if (!env.TURNSTILE_SECRET_KEY) return json({error:'Secret Turnstile belum tersedia pada runtime.'},503);
+  if (!(request.headers.get('Content-Type')||'').includes('application/json')) return json({error:'Gunakan JSON.'},415);
+  if (Number(request.headers.get('Content-Length'))>4096) return json({error:'Permintaan terlalu besar.'},413);
+  try {
+    const raw=await request.text();
+    if(raw.length>4096) return json({error:'Permintaan terlalu besar.'},413);
+    const body=JSON.parse(raw);
+    if(typeof body.token!=='string'||!body.token||body.token.length>2048) return json({error:'Token verifikasi tidak valid.'},400);
+    const response=await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({secret:env.TURNSTILE_SECRET_KEY,response:body.token}),
+      signal:AbortSignal.timeout(10000)
+    });
+    if(!response.ok) return json({error:'Layanan verifikasi belum dapat dijangkau.'},503);
+    const result=await response.json();
+    if(!result.success||result.hostname!==url.hostname||result.action!=='orbiss_signup') return json({verified:false,error:'Verifikasi ditolak atau kedaluwarsa. Coba ulang.'},400);
+    return json({verified:true,accounts:'not_implemented',message:'Verifikasi server berhasil. Belum ada akun dibuat.'});
+  } catch {return json({verified:false,error:'Verifikasi gagal. Muat ulang tantangan dan coba lagi.'},400);}
+}
