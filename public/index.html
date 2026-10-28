@@ -798,6 +798,11 @@ Gunakan Muat ulang feed untuk melihat pesan terbaru. Pembaruan berkala hanya ber
 SPOT IKLAN • DEMO	AD SPACE • DEMO	广告位 • 演示
 Ruang iklan tersedia. Belum ada sponsor aktif.	Ad space available. No active sponsor.	广告展示位，目前没有实际赞助商。
 Lihat ruang partner	View partner space	查看合作伙伴区域
+INFO ORBISS	ORBISS INFO	ORBISS 资讯
+Video demo, bukan siaran pertandingan langsung. Bergabunglah dalam diskusi Community di halaman Live. Jadwal, skor, dan sponsor resmi belum terhubung.	Demo video, not a live match broadcast. Join the Community discussion on the Live page. Official schedules, scores and sponsors are not connected.	演示视频，并非比赛直播。欢迎在直播页面参与社区讨论。尚未接入官方赛程、比分及赞助商。
+Jeda teks	Pause ticker	暂停滚动
+Jalankan teks	Resume ticker	继续滚动
+Informasi berjalan ORBISS	ORBISS scrolling information	ORBISS 滚动资讯
 `;
 const dictionary=new Map();
 for(const line of dictionaryText.trim().split('\n')){const [id,en,zh]=line.split('\t');if(id&&en&&zh)dictionary.set(id,{id,en,'zh-CN':zh})}
@@ -902,3 +907,18 @@ window.addEventListener('hashchange',routeDiscussion);document.addEventListener(
 })();
 </script>
 <style>.orbiss-live-ad{margin:12px 0;padding:12px 14px;min-height:88px;border:1px solid #205078;border-radius:12px;background:linear-gradient(120deg,#0b2944,#051326)}.orbiss-live-ad p{font-size:12px;margin:7px 0}.orbiss-live-ad button{font-size:12px;min-height:40px}@media(min-width:1100px){.live-workspace{grid-template-columns:minmax(0,1.8fr) minmax(260px,1fr) minmax(170px,.65fr)}}@media(max-width:760px){.orbiss-live-ad{padding:10px;min-height:76px}}</style>
+<style>
+.orbiss-ticker{display:flex;align-items:center;gap:10px;background:#05172d;border:1px solid #205078;border-top:2px solid #00bdff;padding:8px 10px;min-height:46px;color:#c6e5f8;overflow:hidden}.orbiss-ticker-label{flex:0 0 auto;color:#46d5ff;font-size:10px;letter-spacing:.7px;font-weight:700}.orbiss-ticker-window{flex:1;min-width:0;overflow:hidden}.orbiss-ticker-track{display:inline-block;white-space:nowrap;font-size:12px;line-height:1.5;padding-left:100%;animation:orbissTickerScroll 45s linear infinite}.orbiss-ticker.paused .orbiss-ticker-track{animation-play-state:paused}.orbiss-ticker button{flex:0 0 auto;min-height:36px;padding:7px 9px;font-size:10px;border-radius:8px}.orbiss-ticker:fullscreen{background:#05172d}
+@keyframes orbissTickerScroll{from{transform:translateX(0)}to{transform:translateX(-100%)}}
+@media(max-width:760px){.orbiss-ticker{padding:6px;gap:6px;min-height:44px}.orbiss-ticker-label{font-size:9px}.orbiss-ticker-track{font-size:11px}.orbiss-ticker button{font-size:10px;min-height:36px;padding:6px}}
+@media(prefers-reduced-motion:reduce){.orbiss-ticker-track{animation:none;padding-left:0;white-space:normal}.orbiss-ticker-window{overflow:auto;max-height:100px}}
+.orbiss-wide .orbiss-live-ad,.stream-stage:fullscreen .orbiss-live-ad{display:none}.orbiss-wide>.note,.stream-stage:fullscreen>.note{display:none}.orbiss-wide .player.youtube-demo,.stream-stage:fullscreen .player.youtube-demo{height:calc(100dvh - 175px)!important;min-height:120px!important}
+</style>
+<script>
+(()=>{
+const player=document.querySelector('#live .stream-stage .player');if(!player||document.getElementById('orbissTicker'))return;
+const ticker=element('section',undefined,'orbiss-ticker');ticker.id='orbissTicker';ticker.setAttribute('aria-label','Informasi berjalan ORBISS');
+const label=element('span','INFO ORBISS','orbiss-ticker-label');const view=element('div',undefined,'orbiss-ticker-window');const text=element('span','Video demo, bukan siaran pertandingan langsung. Bergabunglah dalam diskusi Community di halaman Live. Jadwal, skor, dan sponsor resmi belum terhubung.','orbiss-ticker-track');view.append(text);
+const toggle=element('button','Jeda teks');toggle.type='button';toggle.setAttribute('aria-pressed','false');toggle.onclick=()=>{const paused=ticker.classList.toggle('paused');toggle.textContent=paused?'Jalankan teks':'Jeda teks';toggle.setAttribute('aria-pressed',String(paused))};ticker.append(label,view,toggle);player.after(ticker);if(window.orbissI18n)window.orbissI18n.rescan();
+})();
+</script>
