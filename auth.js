@@ -135,9 +135,10 @@ export async function handleRestore(request,env){
   const moderator=await env.DB.prepare('SELECT user_id FROM moderators WHERE user_id=?').bind(session.row.id).first();if(!moderator)return result({error:'Akses moderator diperlukan.'},403);
   const url=new URL(request.url);
   if(url.pathname==='/api/moderation/hidden'&&request.method==='GET'){
-   const {results}=await env.DB.prepare(`SELECT 'post' AS targetType,p.id,p.body AS content,p.created_at AS createdAt,u.display_name AS author,0 AS parentHidden FROM posts p JOIN users u ON u.id=p.user_id WHERE p.moderation_status='hidden'
-    UNION ALL SELECT 'comment' AS targetType,c.id,c.body AS content,c.created_at AS createdAt,u.display_name AS author,CASE WHEN p.moderation_status='visible' THEN 0 ELSE 1 END AS parentHidden FROM comments c JOIN users u ON u.id=c.user_id JOIN posts p ON p.id=c.post_id WHERE c.moderation_status='hidden'
-    ORDER BY createdAt DESC,id DESC LIMIT 50`).all();return result({items:results,limit:50,scope:'latest_hidden_content'});
+   const {results}=await env.DB.prepare(`SELECT * FROM (
+    SELECT 'post' AS targetType,p.id AS id,p.body AS content,p.created_at AS createdAt,u.display_name AS author,0 AS parentHidden FROM posts p JOIN users u ON u.id=p.user_id WHERE p.moderation_status='hidden'
+    UNION ALL SELECT 'comment' AS targetType,c.id AS id,c.body AS content,c.created_at AS createdAt,u.display_name AS author,CASE WHEN p.moderation_status='visible' THEN 0 ELSE 1 END AS parentHidden FROM comments c JOIN users u ON u.id=c.user_id JOIN posts p ON p.id=c.post_id WHERE c.moderation_status='hidden'
+    ) AS hidden_content ORDER BY createdAt DESC,id DESC LIMIT 50`).all();return result({items:results,limit:50,scope:'latest_hidden_content'});
   }
   if(url.pathname!=='/api/moderation/restore'||request.method!=='POST')return result({error:'Endpoint atau metode tidak tersedia.'},405);
   if(request.headers.get('Origin')!==url.origin)return result({error:'Origin tidak diizinkan.'},403);
@@ -153,5 +154,9 @@ export async function handleRestore(request,env){
   if(outcomes[1].meta.changes!==1)return result({error:'Konten tidak ditemukan atau sudah dipulihkan. Muat ulang daftar.'},409);
   let parentHidden=false;if(!isPost){const parent=await env.DB.prepare('SELECT p.moderation_status FROM posts p JOIN comments c ON c.post_id=p.id WHERE c.id=?').bind(body.targetId).first();parentHidden=parent?.moderation_status!=='visible'}
   return result({ok:true,parentHidden,message:parentHidden?'Komentar dipulihkan, tetapi postingan induknya masih tersembunyi.':'Konten berhasil dipulihkan.'});
- }catch{return result({error:'Pemulihan gagal. Periksa tabel restoration_audit dan log Worker.'},503)}
+ }catch(error){
+  console.error('ORBISS moderation restore endpoint failed', error instanceof Error ? error.message : 'Unknown database error');
+  const listing=new URL(request.url).pathname==='/api/moderation/hidden';
+  return result({error:listing?'Daftar konten tersembunyi belum dapat dimuat. Periksa log Worker; belum ada konten diubah.':'Pemulihan gagal. Periksa tabel restoration_audit dan log Worker.',code:listing?'HIDDEN_LIST_FAILED':'RESTORE_FAILED'},503)
+ }
 }
